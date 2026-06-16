@@ -1,0 +1,20 @@
+{
+  "name": "partner-route-guide",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "조선소 사외협력사 안내 — 협력사 선택 시 조선소→협력사 실제 도로 경로 애니메이션, 진행 아이템 간트, 프로젝트별 협력사 PDF 출력",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}
