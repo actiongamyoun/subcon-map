@@ -5,6 +5,7 @@ import { geocode } from '../lib/kakao.js'
 import { getDirections } from '../lib/api.js'
 import { pathMetrics, pointAt } from '../lib/geo.js'
 import { DEFAULT_YARD } from '../lib/constants.js'
+import { useLang } from '../lib/lang.jsx'
 
 const TRAVEL_MS = 3400
 const FOLLOW_ZOOM = 13
@@ -19,6 +20,7 @@ function compassBearing(a, b) {
 const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 export default function MapView({ yard, partner, onRouted }) {
+  const { t, L: Lz, lang } = useLang()
   const boxRef = useRef(null)
   const mapRef = useRef(null)
   const originMarkerRef = useRef(null)
@@ -35,6 +37,7 @@ export default function MapView({ yard, partner, onRouted }) {
   const [errMsg, setErrMsg] = useState('')
 
   const origin = resolveOrigin(yard)
+  const yardLabel = Lz(yard, 'name') || t('yard.fallback')
 
   // 지도 초기화 (OpenStreetMap)
   useEffect(() => {
@@ -45,11 +48,11 @@ export default function MapView({ yard, partner, onRouted }) {
       attribution: '&copy; OpenStreetMap',
     }).addTo(map)
     mapRef.current = map
-    originMarkerRef.current = makePin(map, origin, 'origin', yard?.name || '조선소')
+    originMarkerRef.current = makePin(map, origin, 'origin', yardLabel)
     setReady(true)
-    const t = setTimeout(() => map.invalidateSize(), 200)
+    const tm = setTimeout(() => map.invalidateSize(), 200)
     return () => {
-      clearTimeout(t)
+      clearTimeout(tm)
       cancelAnimationFrame(rafRef.current)
       map.remove()
       mapRef.current = null
@@ -57,14 +60,23 @@ export default function MapView({ yard, partner, onRouted }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 조선소(출발지) 변경 시 origin 핀 갱신
+  // 조선소(출발지) 변경 또는 언어 변경 시 origin 핀 갱신
   useEffect(() => {
     const map = mapRef.current
     if (!ready || !map) return
     if (originMarkerRef.current) originMarkerRef.current.remove()
-    originMarkerRef.current = makePin(map, origin, 'origin', yard?.name || '조선소')
+    originMarkerRef.current = makePin(map, origin, 'origin', yardLabel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yard?.name, origin.lat, origin.lng, ready])
+  }, [yardLabel, origin.lat, origin.lng, ready])
+
+  // 언어 변경 시 목적지 핀 라벨 갱신 (재애니메이션 없이)
+  useEffect(() => {
+    if (!ready || !partner || !destMarkerRef.current || !mapRef.current) return
+    const pos = destMarkerRef.current.getLatLng()
+    destMarkerRef.current.remove()
+    destMarkerRef.current = makePin(mapRef.current, { lat: pos.lat, lng: pos.lng }, 'dest', Lz(partner, 'name'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
 
   // 협력사 선택 → 경로
   useEffect(() => {
@@ -82,18 +94,16 @@ export default function MapView({ yard, partner, onRouted }) {
     setReadout(null)
     setHintGone(true)
 
-    // 목적지 좌표 (없으면 주소 지오코딩)
     let dest = p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : await geocode(p.addr)
     if (runId !== runIdRef.current) return
     if (!dest) {
-      setErrMsg(`‘${p.name}’의 위치를 찾지 못했습니다. 협력사 관리에서 주소나 좌표를 확인해 주세요.`)
+      setErrMsg(t('map.notFoundBody', { name: Lz(p, 'name') }))
       return
     }
 
     if (destMarkerRef.current) destMarkerRef.current.remove()
-    destMarkerRef.current = makePin(map, dest, 'dest', p.name)
+    destMarkerRef.current = makePin(map, dest, 'dest', Lz(p, 'name'))
 
-    // 길찾기 (실제 도로 or 폴백)
     const dir = await getDirections(origin, dest)
     if (runId !== runIdRef.current) return
     const path = dir.path && dir.path.length > 1 ? dir.path : [[origin.lat, origin.lng], [dest.lat, dest.lng]]
@@ -121,16 +131,14 @@ export default function MapView({ yard, partner, onRouted }) {
     function frame(ts) {
       if (runId !== runIdRef.current) return
       if (!t0) t0 = ts
-      const t = easeIO(Math.min(1, (ts - t0) / TRAVEL_MS))
-      const at = pointAt(path, metrics, t)
+      const tt = easeIO(Math.min(1, (ts - t0) / TRAVEL_MS))
+      const at = pointAt(path, metrics, tt)
       const pos = [at.lat, at.lng]
 
-      // 라이브 폴리라인: 지나온 구간 + 현재 보간점
       const sub = latlngs.slice(0, at.idx)
       sub.push(pos)
       liveRef.current.setLatLngs(sub)
 
-      // 차량 위치/회전
       carRef.current.setLatLng(pos)
       const el = carRef.current.getElement()
       if (el) {
@@ -138,15 +146,14 @@ export default function MapView({ yard, partner, onRouted }) {
         if (inner) inner.style.transform = `rotate(${compassBearing(at.from, at.to)}deg)`
       }
 
-      // 지도 팔로우
       map.setView(pos, FOLLOW_ZOOM, { animate: false })
 
-      if (t < 1) {
+      if (tt < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
         liveRef.current.setLatLngs(latlngs)
         map.fitBounds(L.latLngBounds(latlngs), { padding: [60, 60] })
-        setReadout({ km, eta: etaMin + '분', sim: !dir.real })
+        setReadout({ km, etaMin, sim: !dir.real })
         if (onRouted) onRouted(p.id, { km, sim: !dir.real })
       }
     }
@@ -165,8 +172,8 @@ export default function MapView({ yard, partner, onRouted }) {
         <div className="map-overlay-hint">
           <div className="card-hint">
             <span className="material-symbols-outlined">touch_app</span>
-            <div className="h">협력사를 선택하세요</div>
-            <div className="p">왼쪽 목록에서 협력사를 누르면 조선소에서의 경로가 표시됩니다.</div>
+            <div className="h">{t('map.selectTitle')}</div>
+            <div className="p">{t('map.selectHint')}</div>
           </div>
         </div>
       )}
@@ -175,7 +182,7 @@ export default function MapView({ yard, partner, onRouted }) {
         <div className="map-overlay-hint">
           <div className="card-hint">
             <span className="material-symbols-outlined" style={{ color: 'var(--route)' }}>wrong_location</span>
-            <div className="h">위치를 찾지 못했어요</div>
+            <div className="h">{t('map.notFoundTitle')}</div>
             <div className="p">{errMsg}</div>
           </div>
         </div>
@@ -183,16 +190,16 @@ export default function MapView({ yard, partner, onRouted }) {
 
       {readout && (
         <div className="dist-readout show">
-          <div className="lab"><span className="material-symbols-outlined">straighten</span>도착 거리</div>
+          <div className="lab"><span className="material-symbols-outlined">straighten</span>{t('map.distance')}</div>
           <div className="val">{readout.km}<span className="u">km</span></div>
-          <div className="eta"><span className="material-symbols-outlined">local_shipping</span>예상 소요 {readout.eta}</div>
-          {readout.sim && <div className="badge-sim">시뮬레이션 경로 (길찾기 키 미설정)</div>}
+          <div className="eta"><span className="material-symbols-outlined">local_shipping</span>{t('map.eta')} {readout.etaMin}{t('unit.min')}</div>
+          {readout.sim && <div className="badge-sim">{t('map.simRoute')}</div>}
         </div>
       )}
 
       <div className="map-tools">
         <button className="map-btn" onClick={replay} disabled={!partner || !ready}>
-          <span className="material-symbols-outlined">replay</span>경로 다시 보기
+          <span className="material-symbols-outlined">replay</span>{t('map.replay')}
         </button>
       </div>
     </div>

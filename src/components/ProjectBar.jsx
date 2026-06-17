@@ -1,10 +1,13 @@
+import { useLang } from '../lib/lang.jsx'
+
 export default function ProjectBar({ projects, activeId, onSelect, onManage }) {
+  const { t, L } = useLang()
   return (
     <div className="projbar">
-      <span className="pb-label"><span className="material-symbols-outlined">folder_open</span>프로젝트</span>
+      <span className="pb-label"><span className="material-symbols-outlined">folder_open</span>{t('nav.projects')}</span>
 
       <button className={'chip' + (activeId === null ? ' active' : '')} onClick={() => onSelect(null)}>
-        전체
+        {t('nav.all')}
       </button>
 
       {projects.map((pr) => (
@@ -12,16 +15,16 @@ export default function ProjectBar({ projects, activeId, onSelect, onManage }) {
           key={pr.id}
           className={'chip' + (activeId === pr.id ? ' active' : '')}
           onClick={() => onSelect(pr.id)}
-          title={pr.note || pr.name}
+          title={pr.note || L(pr, 'name')}
         >
-          {pr.name}
+          {L(pr, 'name')}
           <span className="cnt">{(pr.partnerIds || []).length}</span>
         </button>
       ))}
 
       <button className="chip chip-add" onClick={onManage}>
         <span className="material-symbols-outlined" style={{ fontSize: 16 }}>tune</span>
-        프로젝트 관리
+        {t('nav.manageProjects')}
       </button>
     </div>
   )

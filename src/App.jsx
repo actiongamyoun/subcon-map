@@ -8,6 +8,7 @@ import PrintView from './components/PrintView.jsx'
 import YardModal from './components/YardModal.jsx'
 import PartnerModal from './components/PartnerModal.jsx'
 import ProjectModal from './components/ProjectModal.jsx'
+import { LangProvider, useLang } from './lib/lang.jsx'
 import {
   loadData, isDemo, saveYard, savePartner, deletePartner, saveProject, deleteProject,
 } from './lib/api.js'
@@ -15,6 +16,16 @@ import {
 const newId = (p) => p + '_' + Date.now().toString(36) + Math.floor(Math.random() * 1000)
 
 export default function App() {
+  return (
+    <LangProvider>
+      <AppInner />
+    </LangProvider>
+  )
+}
+
+function AppInner() {
+  const { t, L } = useLang()
+
   const [loading, setLoading] = useState(true)
   const [demo, setDemo] = useState(false)
   const [bannerOff, setBannerOff] = useState(false)
@@ -46,8 +57,8 @@ export default function App() {
   // 인쇄 트리거
   useEffect(() => {
     if (!printData) return
-    const t = setTimeout(() => { window.print(); setPrintData(null) }, 80)
-    return () => clearTimeout(t)
+    const tm = setTimeout(() => { window.print(); setPrintData(null) }, 80)
+    return () => clearTimeout(tm)
   }, [printData])
 
   const activeProject = useMemo(
@@ -113,12 +124,12 @@ export default function App() {
   }
 
   const exportAll = () =>
-    setPrintData({ title: '사외협력사 명단', yard, partners, distances })
+    setPrintData({ title: t('print.allTitle'), yard, partners, distances })
 
   const exportProject = () => {
     if (!activeProject) return
     const members = partners.filter((p) => activeProject.partnerIds.includes(p.id))
-    setPrintData({ title: `${activeProject.name} · 협력사 명단`, yard, partners: members, distances })
+    setPrintData({ title: t('print.projectTitle', { name: L(activeProject, 'name') }), yard, partners: members, distances })
   }
 
   if (loading) {
@@ -126,7 +137,7 @@ export default function App() {
       <div style={{ height: '100vh', display: 'grid', placeItems: 'center', color: '#6B8199' }}>
         <div style={{ textAlign: 'center' }}>
           <div className="material-symbols-outlined" style={{ fontSize: 40, color: '#0EA5A4' }}>directions_boat</div>
-          <div style={{ marginTop: 8, fontSize: 14 }}>불러오는 중…</div>
+          <div style={{ marginTop: 8, fontSize: 14 }}>{t('app.loading')}</div>
         </div>
       </div>
     )
@@ -138,7 +149,7 @@ export default function App() {
     <>
       <div className="app">
         <TopBar
-          yardName={yard?.name}
+          yard={yard}
           activeProject={activeProject}
           onEditYard={() => setYardOpen(true)}
           onManagePartners={() => setPartnersOpen(true)}
@@ -195,7 +206,7 @@ export default function App() {
       {demo && !bannerOff && (
         <div className="demo-banner">
           <span className="material-symbols-outlined">info</span>
-          <span><b>샘플 데이터</b>로 동작 중 · 구글시트(GAS) 연결 시 실제 데이터가 표시됩니다</span>
+          <span><b>{t('demo.tag')}</b>{t('demo.body')}</span>
           <button className="btn-ghost btn-sm" style={{ color: '#fff', padding: '2px 6px' }} onClick={() => setBannerOff(true)}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
           </button>

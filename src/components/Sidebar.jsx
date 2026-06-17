@@ -1,26 +1,28 @@
-import { catLabel, catClass } from '../lib/constants.js'
+import { catClass } from '../lib/constants.js'
+import { useLang } from '../lib/lang.jsx'
 
 export default function Sidebar({
   partners, selectedId, onSelect,
   projectMode, activeProject, checkedIds, onToggleCheck,
   distances,
 }) {
+  const { t, L, tc } = useLang()
   return (
     <aside className="sidebar">
       <div className="side-head">
         <div className="row">
-          <span className="t">협력사 목록</span>
+          <span className="t">{t('side.partners')}</span>
           {projectMode && activeProject && (
             <span className="proj-tag">
               <span className="material-symbols-outlined">check_circle</span>
-              {checkedIds.size}개 선택
+              {t('side.selectedN', { n: checkedIds.size })}
             </span>
           )}
         </div>
         <div className="c">
           {projectMode && activeProject
-            ? `${activeProject.name} · 체크된 협력사가 PDF에 포함됩니다`
-            : `${partners.length} 곳 등록됨`}
+            ? t('side.projectHint', { name: L(activeProject, 'name') })
+            : t('side.registeredN', { n: partners.length })}
         </div>
       </div>
 
@@ -28,7 +30,7 @@ export default function Sidebar({
         {partners.length === 0 ? (
           <div className="empty">
             <span className="material-symbols-outlined">domain_disabled</span>
-            등록된 협력사가 없습니다.<br />상단 ‘협력사 관리’에서 추가하세요.
+            {t('side.emptyTitle')}<br />{t('side.emptyHint')}
           </div>
         ) : (
           partners.map((p) => {
@@ -47,23 +49,23 @@ export default function Sidebar({
                     onClick={(e) => { e.stopPropagation(); onToggleCheck(p.id) }}
                     role="checkbox"
                     aria-checked={checked}
-                    title={checked ? '프로젝트에서 제외' : '프로젝트에 추가'}
+                    title={checked ? t('side.removeFromProject') : t('side.addToProject')}
                   >
                     <span className="material-symbols-outlined">check</span>
                   </div>
                 )}
                 <div className="body">
                   <div className="name">
-                    {p.name}
-                    <span className={'badge ' + catClass(p.cat)}>{catLabel(p.cat)}</span>
+                    {L(p, 'name')}
+                    <span className={'badge ' + catClass(p.cat)}>{tc(p.cat)}</span>
                   </div>
-                  {p.desc && <div className="desc">{p.desc}</div>}
+                  {L(p, 'desc') && <div className="desc">{L(p, 'desc')}</div>}
                   <div className={'meta' + (dist ? '' : ' dim')}>
                     <span className="material-symbols-outlined">route</span>
                     {dist ? (
-                      <><span>조선소에서</span><span className="km">{dist.km} km</span>{dist.sim && <span style={{ color: 'var(--muted)' }}>(추정)</span>}</>
+                      <><span>{t('side.fromYard')}</span><span className="km">{dist.km} km</span>{dist.sim && <span style={{ color: 'var(--muted)' }}>({t('side.estimate')})</span>}</>
                     ) : (
-                      <span className="km">경로 보기 →</span>
+                      <span className="km">{t('side.viewRoute')}</span>
                     )}
                   </div>
                 </div>
