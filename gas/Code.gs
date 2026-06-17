@@ -14,9 +14,9 @@
  */
 
 var SHEETS = {
-  yard:     { name: '조선소',   headers: ['name', 'addr', 'lat', 'lng'] },
-  partners: { name: '협력사',   headers: ['id', 'name', 'cat', 'addr', 'desc', 'lat', 'lng', 'items'] },
-  projects: { name: '프로젝트', headers: ['id', 'name', 'note', 'partnerIds'] },
+  yard:     { name: '조선소',   headers: ['name', 'name_en', 'addr', 'addr_en', 'lat', 'lng'] },
+  partners: { name: '협력사',   headers: ['id', 'name', 'name_en', 'cat', 'addr', 'addr_en', 'desc', 'desc_en', 'lat', 'lng', 'items'] },
+  projects: { name: '프로젝트', headers: ['id', 'name', 'name_en', 'note', 'partnerIds'] },
 }
 
 function doGet(e) {
@@ -54,9 +54,12 @@ function listAll() {
     return {
       id: String(p.id),
       name: p.name,
+      name_en: p.name_en || '',
       cat: p.cat || 'etc',
       addr: p.addr || '',
+      addr_en: p.addr_en || '',
       desc: p.desc || '',
+      desc_en: p.desc_en || '',
       lat: p.lat ? Number(p.lat) : null,
       lng: p.lng ? Number(p.lng) : null,
       items: parseJson(p.items, []),
@@ -67,6 +70,7 @@ function listAll() {
     return {
       id: String(pr.id),
       name: pr.name,
+      name_en: pr.name_en || '',
       note: pr.note || '',
       partnerIds: String(pr.partnerIds || '')
         .split(',')
@@ -81,7 +85,7 @@ function listAll() {
 /* ───────── 쓰기 ───────── */
 function saveYard(p) {
   var sh = getSheet(SHEETS.yard)
-  var row = [p.name || '', p.addr || '', p.lat || '', p.lng || '']
+  var row = [p.name || '', p.name_en || '', p.addr || '', p.addr_en || '', p.lat || '', p.lng || '']
   if (sh.getLastRow() < 2) sh.appendRow(row)
   else sh.getRange(2, 1, 1, row.length).setValues([row])
   return { ok: true }
@@ -92,7 +96,8 @@ function savePartner(p) {
   var sh = getSheet(def)
   var id = p.id || genId('p')
   var row = [
-    id, p.name || '', p.cat || 'etc', p.addr || '', p.desc || '',
+    id, p.name || '', p.name_en || '', p.cat || 'etc',
+    p.addr || '', p.addr_en || '', p.desc || '', p.desc_en || '',
     p.lat || '', p.lng || '', JSON.stringify(p.items || []),
   ]
   var r = findRowById(sh, id)
@@ -122,7 +127,7 @@ function saveProject(p) {
   var sh = getSheet(SHEETS.projects)
   var id = p.id || genId('prj')
   var ids = (p.partnerIds || []).join(',')
-  var row = [id, p.name || '', p.note || '', ids]
+  var row = [id, p.name || '', p.name_en || '', p.note || '', ids]
   var r = findRowById(sh, id)
   if (r > 0) sh.getRange(r, 1, 1, row.length).setValues([row])
   else sh.appendRow(row)
