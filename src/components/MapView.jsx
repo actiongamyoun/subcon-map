@@ -1,133 +1,118 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadKakao, geocode } from '../lib/kakao.js'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { geocode } from '../lib/kakao.js'
 import { getDirections } from '../lib/api.js'
 import { pathMetrics, pointAt } from '../lib/geo.js'
 import { DEFAULT_YARD } from '../lib/constants.js'
 
 const TRAVEL_MS = 3400
-const FOLLOW_LEVEL = 6 // 카카오 줌 레벨(작을수록 확대)
+const FOLLOW_ZOOM = 13
 
 function compassBearing(a, b) {
   const toRad = (d) => (d * Math.PI) / 180
-  const φ1 = toRad(a.lat), φ2 = toRad(b.lat), Δλ = toRad(b.lng - a.lng)
-  const y = Math.sin(Δλ) * Math.cos(φ2)
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
+  const f1 = toRad(a.lat), f2 = toRad(b.lat), dl = toRad(b.lng - a.lng)
+  const y = Math.sin(dl) * Math.cos(f2)
+  const x = Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dl)
   return (Math.atan2(y, x) * 180) / Math.PI
 }
 const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 export default function MapView({ yard, partner, onRouted }) {
   const boxRef = useRef(null)
-  const kakaoRef = useRef(null)
   const mapRef = useRef(null)
-  const originPinRef = useRef(null)
-  const destPinRef = useRef(null)
+  const originMarkerRef = useRef(null)
+  const destMarkerRef = useRef(null)
   const carRef = useRef(null)
-  const carElRef = useRef(null)
   const faintRef = useRef(null)
   const liveRef = useRef(null)
   const rafRef = useRef(null)
   const runIdRef = useRef(0)
 
-  const [mapState, setMapState] = useState('init') // init | ready | nokey
+  const [ready, setReady] = useState(false)
   const [hintGone, setHintGone] = useState(false)
-  const [readout, setReadout] = useState(null) // { km, eta, sim }
+  const [readout, setReadout] = useState(null)
   const [errMsg, setErrMsg] = useState('')
 
   const origin = resolveOrigin(yard)
 
-  // 지도 초기화
+  // 지도 초기화 (OpenStreetMap)
   useEffect(() => {
-    let dead = false
-    loadKakao()
-      .then((kakao) => {
-        if (dead) return
-        kakaoRef.current = kakao
-        const map = new kakao.maps.Map(boxRef.current, {
-          center: new kakao.maps.LatLng(origin.lat, origin.lng),
-          level: 8,
-        })
-        mapRef.current = map
-        originPinRef.current = makePin(kakao, map, origin, 'origin', yard?.name || '조선소')
-        setMapState('ready')
-      })
-      .catch(() => { if (!dead) setMapState('nokey') })
+    const map = L.map(boxRef.current, { zoomControl: true, attributionControl: true })
+      .setView([origin.lat, origin.lng], 12)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap',
+    }).addTo(map)
+    mapRef.current = map
+    originMarkerRef.current = makePin(map, origin, 'origin', yard?.name || '조선소')
+    setReady(true)
+    const t = setTimeout(() => map.invalidateSize(), 200)
     return () => {
-      dead = true
+      clearTimeout(t)
       cancelAnimationFrame(rafRef.current)
+      map.remove()
+      mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // 조선소(출발지) 변경 시 origin 핀 갱신
   useEffect(() => {
-    const kakao = kakaoRef.current, map = mapRef.current
-    if (mapState !== 'ready' || !kakao || !map) return
-    if (originPinRef.current) originPinRef.current.setMap(null)
-    originPinRef.current = makePin(kakao, map, origin, 'origin', yard?.name || '조선소')
+    const map = mapRef.current
+    if (!ready || !map) return
+    if (originMarkerRef.current) originMarkerRef.current.remove()
+    originMarkerRef.current = makePin(map, origin, 'origin', yard?.name || '조선소')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yard?.name, origin.lat, origin.lng, mapState])
+  }, [yard?.name, origin.lat, origin.lng, ready])
 
   // 협력사 선택 → 경로
   useEffect(() => {
-    if (mapState !== 'ready' || !partner) return
+    if (!ready || !partner) return
     runRoute(partner)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partner?.id, mapState])
+  }, [partner?.id, ready])
 
   async function runRoute(p) {
-    const kakao = kakaoRef.current, map = mapRef.current
-    if (!kakao || !map) return
+    const map = mapRef.current
+    if (!map) return
     const runId = ++runIdRef.current
     cancelAnimationFrame(rafRef.current)
     setErrMsg('')
     setReadout(null)
     setHintGone(true)
 
-    // 목적지 좌표 확보 (없으면 주소 지오코딩)
-    let dest = p.lat && p.lng ? { lat: p.lat, lng: p.lng } : await geocode(p.addr)
+    // 목적지 좌표 (없으면 주소 지오코딩)
+    let dest = p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : await geocode(p.addr)
     if (runId !== runIdRef.current) return
     if (!dest) {
-      setErrMsg(`‘${p.name}’의 위치를 찾지 못했습니다. 협력사 관리에서 주소를 확인해 주세요.`)
+      setErrMsg(`‘${p.name}’의 위치를 찾지 못했습니다. 협력사 관리에서 주소나 좌표를 확인해 주세요.`)
       return
     }
 
-    // 목적지 핀
-    if (destPinRef.current) destPinRef.current.setMap(null)
-    destPinRef.current = makePin(kakao, map, dest, 'dest', p.name)
+    if (destMarkerRef.current) destMarkerRef.current.remove()
+    destMarkerRef.current = makePin(map, dest, 'dest', p.name)
 
     // 길찾기 (실제 도로 or 폴백)
     const dir = await getDirections(origin, dest)
     if (runId !== runIdRef.current) return
     const path = dir.path && dir.path.length > 1 ? dir.path : [[origin.lat, origin.lng], [dest.lat, dest.lng]]
+    const latlngs = path.map(([la, ln]) => [la, ln])
 
-    // 폴리라인 (희미한 전체 + 진하게 그려지는 라이브)
-    if (faintRef.current) faintRef.current.setMap(null)
-    if (liveRef.current) liveRef.current.setMap(null)
-    const fullLatLng = path.map(([la, ln]) => new kakao.maps.LatLng(la, ln))
-    faintRef.current = new kakao.maps.Polyline({
-      map, path: fullLatLng, strokeWeight: 5, strokeColor: '#FF6A3D', strokeOpacity: 0.25, strokeStyle: 'solid',
-    })
-    liveRef.current = new kakao.maps.Polyline({
-      map, path: [fullLatLng[0]], strokeWeight: 5, strokeColor: '#FF6A3D', strokeOpacity: 0.95, strokeStyle: 'solid',
-    })
+    if (faintRef.current) faintRef.current.remove()
+    if (liveRef.current) liveRef.current.remove()
+    faintRef.current = L.polyline(latlngs, { color: '#FF6A3D', weight: 5, opacity: 0.25 }).addTo(map)
+    liveRef.current = L.polyline([latlngs[0]], { color: '#FF6A3D', weight: 5, opacity: 0.95 }).addTo(map)
 
-    // 차량 오버레이
     if (!carRef.current) {
-      const el = document.createElement('div')
-      el.className = 'car-marker'
-      el.innerHTML = '<div class="disc"><span class="material-symbols-outlined">navigation</span></div>'
-      carElRef.current = el
-      carRef.current = new kakao.maps.CustomOverlay({ content: el, position: fullLatLng[0], yAnchor: 0.5, xAnchor: 0.5, zIndex: 10 })
+      carRef.current = L.marker(latlngs[0], { icon: carIcon(), zIndexOffset: 1000, interactive: false }).addTo(map)
+    } else {
+      carRef.current.setLatLng(latlngs[0])
+      carRef.current.addTo(map)
     }
-    carRef.current.setPosition(fullLatLng[0])
-    carRef.current.setMap(map)
 
     const metrics = pathMetrics(path)
-
-    // 줌인 → 이동(팔로우) → 줌아웃 시퀀스
-    map.setLevel(FOLLOW_LEVEL, { anchor: new kakao.maps.LatLng(origin.lat, origin.lng) })
-    map.setCenter(new kakao.maps.LatLng(origin.lat, origin.lng))
+    map.setView(latlngs[0], FOLLOW_ZOOM, { animate: false })
 
     let t0 = null
     const km = (dir.distance / 1000).toFixed(1)
@@ -138,29 +123,29 @@ export default function MapView({ yard, partner, onRouted }) {
       if (!t0) t0 = ts
       const t = easeIO(Math.min(1, (ts - t0) / TRAVEL_MS))
       const at = pointAt(path, metrics, t)
-      const pos = new kakao.maps.LatLng(at.lat, at.lng)
+      const pos = [at.lat, at.lng]
 
       // 라이브 폴리라인: 지나온 구간 + 현재 보간점
-      const sub = fullLatLng.slice(0, at.idx)
+      const sub = latlngs.slice(0, at.idx)
       sub.push(pos)
-      liveRef.current.setPath(sub)
+      liveRef.current.setLatLngs(sub)
 
       // 차량 위치/회전
-      carRef.current.setPosition(pos)
-      const brg = compassBearing(at.from, at.to)
-      if (carElRef.current) carElRef.current.style.transform = `rotate(${brg}deg)`
+      carRef.current.setLatLng(pos)
+      const el = carRef.current.getElement()
+      if (el) {
+        const inner = el.querySelector('.car-marker')
+        if (inner) inner.style.transform = `rotate(${compassBearing(at.from, at.to)}deg)`
+      }
 
       // 지도 팔로우
-      map.setCenter(pos)
+      map.setView(pos, FOLLOW_ZOOM, { animate: false })
 
       if (t < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
-        liveRef.current.setPath(fullLatLng)
-        // 전체 경로가 보이게 줌아웃
-        const bounds = new kakao.maps.LatLngBounds()
-        fullLatLng.forEach((ll) => bounds.extend(ll))
-        map.setBounds(bounds, 70, 70, 70, 70)
+        liveRef.current.setLatLngs(latlngs)
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [60, 60] })
         setReadout({ km, eta: etaMin + '분', sim: !dir.real })
         if (onRouted) onRouted(p.id, { km, sim: !dir.real })
       }
@@ -176,20 +161,7 @@ export default function MapView({ yard, partner, onRouted }) {
     <div className="mapwrap">
       <div className="kmap" ref={boxRef} />
 
-      {mapState === 'nokey' && (
-        <div className="map-overlay-hint">
-          <div className="card-hint">
-            <span className="material-symbols-outlined">map</span>
-            <div className="h">지도 키를 설정하면 지도가 표시됩니다</div>
-            <div className="p">
-              Vercel 환경변수 <code>VITE_KAKAO_JS_KEY</code> 에 카카오 JavaScript 키를 등록하고
-              플랫폼 Web 도메인에 배포 주소를 추가하세요.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {mapState === 'ready' && !hintGone && (
+      {ready && !hintGone && !errMsg && (
         <div className="map-overlay-hint">
           <div className="card-hint">
             <span className="material-symbols-outlined">touch_app</span>
@@ -219,14 +191,9 @@ export default function MapView({ yard, partner, onRouted }) {
       )}
 
       <div className="map-tools">
-        <button className="map-btn" onClick={replay} disabled={!partner || mapState !== 'ready'}>
+        <button className="map-btn" onClick={replay} disabled={!partner || !ready}>
           <span className="material-symbols-outlined">replay</span>경로 다시 보기
         </button>
-      </div>
-
-      <div className="map-legend">
-        <span><i style={{ background: 'var(--brand)' }} />조선소</span>
-        <span><i style={{ background: 'var(--route)' }} />협력사</span>
       </div>
     </div>
   )
@@ -238,13 +205,24 @@ function resolveOrigin(yard) {
   return { lat: DEFAULT_YARD.lat, lng: DEFAULT_YARD.lng }
 }
 
-function makePin(kakao, map, pos, kind, label) {
-  const el = document.createElement('div')
-  el.className = 'pin ' + kind
+function makePin(map, pos, kind, label) {
   const icon = kind === 'origin' ? 'anchor' : 'apartment'
-  el.innerHTML = `<div class="dot"><span class="material-symbols-outlined">${icon}</span></div><div class="tag">${escapeHtml(label)}</div>`
-  return new kakao.maps.CustomOverlay({
-    map, content: el, position: new kakao.maps.LatLng(pos.lat, pos.lng), yAnchor: 1, xAnchor: 0.5, zIndex: 6,
+  const html =
+    `<div class="pin ${kind}"><div class="dot"><span class="material-symbols-outlined">${icon}</span></div>` +
+    `<div class="tag">${escapeHtml(label)}</div></div>`
+  return L.marker([pos.lat, pos.lng], {
+    icon: L.divIcon({ html, className: 'pin-divicon', iconSize: [0, 0], iconAnchor: [0, 0] }),
+    interactive: false,
+    keyboard: false,
+  }).addTo(map)
+}
+
+function carIcon() {
+  return L.divIcon({
+    html: '<div class="car-marker"><div class="disc"><span class="material-symbols-outlined">navigation</span></div></div>',
+    className: 'car-divicon',
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
   })
 }
 
