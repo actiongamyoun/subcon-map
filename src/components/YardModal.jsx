@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Modal from './Modal.jsx'
-import { geocode } from '../lib/kakao.js'
+import LocationSearch from './LocationSearch.jsx'
 import { useLang } from '../lib/lang.jsx'
 
 export default function YardModal({ yard, onClose, onSave }) {
@@ -13,16 +13,9 @@ export default function YardModal({ yard, onClose, onSave }) {
     lat: yard?.lat ?? '',
     lng: yard?.lng ?? '',
   })
-  const [geo, setGeo] = useState(null) // null | 'load' | 'ok' | 'warn'
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
 
-  async function doGeocode() {
-    if (!f.addr) { setGeo('warn'); return }
-    setGeo('load')
-    const r = await geocode(f.addr)
-    if (r) { setF((s) => ({ ...s, lat: r.lat.toFixed(6), lng: r.lng.toFixed(6) })); setGeo('ok') }
-    else setGeo('warn')
-  }
+  const onPick = (r) => setF((s) => ({ ...s, addr: r.addr, lat: r.lat.toFixed(6), lng: r.lng.toFixed(6) }))
 
   const save = () => {
     onSave({
@@ -63,16 +56,13 @@ export default function YardModal({ yard, onClose, onSave }) {
       </div>
 
       <div className="field">
-        <label>{t('field.address')} <span className="hint">{t('geo.enterThenFind')}</span></label>
-        <div className="geo-row">
-          <input className="in" value={f.addr} onChange={(e) => { set('addr', e.target.value); setGeo(null) }} placeholder="부산광역시 영도구 …" />
-          <button className="btn" onClick={doGeocode}>
-            <span className="material-symbols-outlined">my_location</span>{t('geo.find')}
-          </button>
-          {geo === 'load' && <span className="geo-state geo-load">{t('geo.searching')}</span>}
-          {geo === 'ok' && <span className="geo-state geo-ok">{t('geo.found')}</span>}
-          {geo === 'warn' && <span className="geo-state geo-warn">{t('geo.notFound')}</span>}
-        </div>
+        <label>{t('loc.search')} <span className="hint">{t('loc.hint')}</span></label>
+        <LocationSearch onPick={onPick} />
+      </div>
+
+      <div className="field">
+        <label>{t('field.address')}</label>
+        <input className="in" value={f.addr} onChange={(e) => set('addr', e.target.value)} placeholder="부산광역시 영도구 …" />
       </div>
 
       <div className="field">

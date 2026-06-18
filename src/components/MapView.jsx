@@ -9,6 +9,7 @@ import { useLang } from '../lib/lang.jsx'
 
 const TRAVEL_MS = 3400
 const FOLLOW_ZOOM = 13
+const DEST_ZOOM = 16 // 도착 시 목적지 클로즈업 줌 레벨
 
 function compassBearing(a, b) {
   const toRad = (d) => (d * Math.PI) / 180
@@ -29,11 +30,13 @@ export default function MapView({ yard, partner, onRouted }) {
   const faintRef = useRef(null)
   const liveRef = useRef(null)
   const rafRef = useRef(null)
+  const countRafRef = useRef(null)
   const runIdRef = useRef(0)
 
   const [ready, setReady] = useState(false)
   const [hintGone, setHintGone] = useState(false)
   const [readout, setReadout] = useState(null)
+  const [displayKm, setDisplayKm] = useState(0)
   const [errMsg, setErrMsg] = useState('')
 
   const origin = resolveOrigin(yard)
@@ -54,6 +57,7 @@ export default function MapView({ yard, partner, onRouted }) {
     return () => {
       clearTimeout(tm)
       cancelAnimationFrame(rafRef.current)
+      cancelAnimationFrame(countRafRef.current)
       map.remove()
       mapRef.current = null
     }
@@ -84,6 +88,25 @@ export default function MapView({ yard, partner, onRouted }) {
     runRoute(partner)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partner?.id, ready])
+
+  // 거리 카운트업 애니메이션 (0 → 최종 거리)
+  useEffect(() => {
+    cancelAnimationFrame(countRafRef.current)
+    if (!readout) { setDisplayKm(0); return }
+    const target = parseFloat(readout.km) || 0
+    let t0 = null
+    const dur = 900
+    const step = (ts) => {
+      if (!t0) t0 = ts
+      const p = Math.min(1, (ts - t0) / dur)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setDisplayKm(target * eased)
+      if (p < 1) countRafRef.current = requestAnimationFrame(step)
+      else setDisplayKm(target)
+    }
+    countRafRef.current = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(countRafRef.current)
+  }, [readout])
 
   async function runRoute(p) {
     const map = mapRef.current
@@ -152,7 +175,8 @@ export default function MapView({ yard, partner, onRouted }) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
         liveRef.current.setLatLngs(latlngs)
-        map.fitBounds(L.latLngBounds(latlngs), { padding: [60, 60] })
+        // 도착 연출: 목적지로 부드럽게 줌인(크게) + 상단 거리 배너
+        map.flyTo([dest.lat, dest.lng], DEST_ZOOM, { duration: 1.4 })
         setReadout({ km, etaMin, sim: !dir.real })
         if (onRouted) onRouted(p.id, { km, sim: !dir.real })
       }
@@ -189,10 +213,16 @@ export default function MapView({ yard, partner, onRouted }) {
       )}
 
       {readout && (
-        <div className="dist-readout show">
-          <div className="lab"><span className="material-symbols-outlined">straighten</span>{t('map.distance')}</div>
-          <div className="val">{readout.km}<span className="u">km</span></div>
-          <div className="eta"><span className="material-symbols-outlined">local_shipping</span>{t('map.eta')} {readout.etaMin}{t('unit.min')}</div>
+        <div className="dist-top" key={partner?.id || 'd'}>
+          <span className="material-symbols-outlined ic">flag</span>
+          <div className="dt-body">
+            <div className="lab">{t('map.finalDistance')}</div>
+            <div className="val">{displayKm.toFixed(1)}<span className="u">km</span></div>
+          </div>
+          <div className="dt-eta">
+            <span className="material-symbols-outlined">local_shipping</span>
+            {t('map.eta')} {readout.etaMin}{t('unit.min')}
+          </div>
           {readout.sim && <div className="badge-sim">{t('map.simRoute')}</div>}
         </div>
       )}

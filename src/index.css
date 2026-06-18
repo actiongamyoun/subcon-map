@@ -232,6 +232,48 @@ button { font-family: inherit; }
 .dist-readout .eta .material-symbols-outlined { font-size: 13px; }
 .dist-readout .badge-sim { margin-top: 7px; font-size: 10px; color: #ffd9c9; background: rgba(255,106,61,.22); border-radius: 6px; padding: 2px 7px; display: inline-block; }
 
+/* 도착 시 상단 중앙 거리 배너 (애니메이션) */
+.dist-top {
+  position: absolute; top: 16px; left: 50%; z-index: 6;
+  display: flex; align-items: center; gap: 16px;
+  background: rgba(12, 36, 64, .92); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 106, 61, .5); border-radius: 16px;
+  padding: 10px 20px; color: #fff; box-shadow: 0 16px 40px rgba(12,36,64,.4);
+  transform-origin: top center; pointer-events: none;
+  animation: distIn .55s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes distIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-18px) scale(.94); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+.dist-top .ic { font-size: 26px; color: var(--route); }
+.dist-top .dt-body { display: flex; flex-direction: column; gap: 1px; }
+.dist-top .lab { font-size: 9.5px; letter-spacing: .16em; color: #ffb79e; text-transform: uppercase; font-weight: 800; }
+.dist-top .val { font-family: var(--mono); font-size: 28px; font-weight: 700; line-height: 1; display: flex; align-items: baseline; gap: 4px; }
+.dist-top .val .u { font-size: 13px; color: #ffb79e; }
+.dist-top .dt-eta { font-family: var(--mono); font-size: 12px; color: #9fb6cd; display: flex; align-items: center; gap: 5px; padding-left: 14px; border-left: 1px solid rgba(255,255,255,.16); }
+.dist-top .dt-eta .material-symbols-outlined { font-size: 15px; }
+.dist-top .badge-sim { font-size: 10px; color: #ffd9c9; background: rgba(255,106,61,.22); border-radius: 6px; padding: 3px 8px; }
+
+/* 위치 검색 (카카오맵식) */
+.locsearch { display: flex; flex-direction: column; gap: 0; }
+.locsearch .geo-row { display: flex; gap: 8px; }
+.locmsg { font-size: 12.5px; color: var(--muted); padding: 9px 4px; font-family: var(--mono); }
+.locresults {
+  list-style: none; margin: 8px 0 0; padding: 5px; max-height: 230px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow);
+}
+.locresults li {
+  display: flex; align-items: flex-start; gap: 9px; padding: 9px 10px; border-radius: 9px; cursor: pointer;
+  transition: background .12s;
+}
+.locresults li:hover { background: var(--bg); }
+.locresults li .material-symbols-outlined { font-size: 18px; color: var(--route-deep); margin-top: 1px; flex-shrink: 0; }
+.locresults .lr-text { min-width: 0; }
+.locresults .lr-name { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.locresults .lr-addr { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+
 .map-tools { position: absolute; left: 14px; bottom: 14px; z-index: 5; display: flex; gap: 8px; }
 .map-btn {
   appearance: none; border: 1px solid rgba(12,36,64,.12); background: rgba(255,255,255,.94);

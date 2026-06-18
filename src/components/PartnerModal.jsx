@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Modal from './Modal.jsx'
-import { geocode } from '../lib/kakao.js'
+import LocationSearch from './LocationSearch.jsx'
 import { CATEGORY_ORDER, CATEGORIES, STATUS_ORDER } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
@@ -11,32 +11,24 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
   const { t, L, tc, ts } = useLang()
   const [mode, setMode] = useState('list') // list | edit
   const [draft, setDraft] = useState(blankDraft())
-  const [geo, setGeo] = useState(null)
 
-  const startAdd = () => { setDraft(blankDraft()); setGeo(null); setMode('edit') }
+  const startAdd = () => { setDraft(blankDraft()); setMode('edit') }
   const startEdit = (p) => {
     setDraft({
       ...p,
       name_en: p.name_en || '', addr_en: p.addr_en || '', desc_en: p.desc_en || '',
       lat: p.lat ?? '', lng: p.lng ?? '', items: (p.items || []).map((it) => ({ ...it })),
     })
-    setGeo(null); setMode('edit')
+    setMode('edit')
   }
 
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
+  const onPick = (r) => setDraft((d) => ({ ...d, addr: r.addr, lat: r.lat.toFixed(6), lng: r.lng.toFixed(6) }))
   const setItem = (i, k, v) => setDraft((d) => {
     const items = d.items.slice(); items[i] = { ...items[i], [k]: v }; return { ...d, items }
   })
   const addItem = () => setDraft((d) => ({ ...d, items: [...d.items, { id: tmpId('i'), name: '', start: '', end: '', status: 'plan' }] }))
   const delItem = (i) => setDraft((d) => ({ ...d, items: d.items.filter((_, x) => x !== i) }))
-
-  async function doGeocode() {
-    if (!draft.addr) { setGeo('warn'); return }
-    setGeo('load')
-    const r = await geocode(draft.addr)
-    if (r) { setDraft((d) => ({ ...d, lat: r.lat.toFixed(6), lng: r.lng.toFixed(6) })); setGeo('ok') }
-    else setGeo('warn')
-  }
 
   const save = () => {
     const clean = {
@@ -124,14 +116,13 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
       </div>
 
       <div className="field">
-        <label>{t('field.address')} <span className="hint">{t('geo.enterThenFind')}</span></label>
-        <div className="geo-row">
-          <input className="in" value={draft.addr} onChange={(e) => { set('addr', e.target.value); setGeo(null) }} placeholder="부산광역시 …" />
-          <button className="btn" onClick={doGeocode}><span className="material-symbols-outlined">my_location</span>{t('geo.find')}</button>
-          {geo === 'load' && <span className="geo-state geo-load">{t('geo.searching')}</span>}
-          {geo === 'ok' && <span className="geo-state geo-ok">{t('geo.found')}</span>}
-          {geo === 'warn' && <span className="geo-state geo-warn">{t('geo.notFound')}</span>}
-        </div>
+        <label>{t('loc.search')} <span className="hint">{t('loc.hint')}</span></label>
+        <LocationSearch onPick={onPick} />
+      </div>
+
+      <div className="field">
+        <label>{t('field.address')}</label>
+        <input className="in" value={draft.addr} onChange={(e) => set('addr', e.target.value)} placeholder="부산광역시 …" />
       </div>
 
       <div className="field">

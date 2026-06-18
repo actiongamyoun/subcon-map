@@ -37,7 +37,15 @@ export const STRINGS = {
     'map.eta': '예상 소요',
     'map.simRoute': '시뮬레이션 경로 (길찾기 키 미설정)',
     'map.replay': '경로 다시 보기',
+    'map.finalDistance': '최종 이동 거리',
     'unit.min': '분',
+
+    'loc.search': '위치 검색',
+    'loc.hint': '이름으로 찾아 목록에서 선택',
+    'loc.placeholder': '업체명 또는 주소 검색',
+    'loc.searchBtn': '검색',
+    'loc.searching': '검색 중…',
+    'loc.noResults': '검색 결과가 없습니다',
 
     'gantt.title': '진행 일정',
     'gantt.noPartner': '협력사 미선택',
@@ -163,7 +171,15 @@ export const STRINGS = {
     'map.eta': 'ETA',
     'map.simRoute': 'Simulated route (no routing key)',
     'map.replay': 'Replay route',
+    'map.finalDistance': 'Total distance',
     'unit.min': ' min',
+
+    'loc.search': 'Find location',
+    'loc.hint': 'Search by name, pick from the list',
+    'loc.placeholder': 'Search by company name or address',
+    'loc.searchBtn': 'Search',
+    'loc.searching': 'Searching…',
+    'loc.noResults': 'No results found',
 
     'gantt.title': 'Schedule',
     'gantt.noPartner': 'No partner selected',
