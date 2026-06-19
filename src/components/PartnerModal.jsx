@@ -4,25 +4,43 @@ import LocationSearch from './LocationSearch.jsx'
 import MapPicker from './MapPicker.jsx'
 import CatBadge from './CatBadge.jsx'
 import { CATEGORY_ORDER, STATUS_ORDER } from '../lib/constants.js'
+import { uploadBrochure } from '../lib/api.js'
 import { useLang } from '../lib/lang.jsx'
 
 const tmpId = (p) => p + '_' + Math.random().toString(36).slice(2, 8)
-const blankDraft = () => ({ id: null, name: '', name_en: '', cat: 'pipe', addr: '', addr_en: '', desc: '', desc_en: '', lat: '', lng: '', items: [] })
+const blankDraft = () => ({ id: null, name: '', name_en: '', cat: 'pipe', addr: '', addr_en: '', desc: '', desc_en: '', lat: '', lng: '', homepage: '', brochure: '', items: [] })
 
 export default function PartnerModal({ partners, projects = [], activeProjectId = null, onClose, onSave, onDelete }) {
   const { t, L, tc, ts } = useLang()
   const [mode, setMode] = useState('list') // list | edit
   const [draft, setDraft] = useState(blankDraft())
+  const [uploading, setUploading] = useState(false)
 
   const startAdd = () => { setDraft(blankDraft()); setMode('edit') }
   const startEdit = (p) => {
     setDraft({
       ...p,
       name_en: p.name_en || '', addr_en: p.addr_en || '', desc_en: p.desc_en || '',
+      homepage: p.homepage || '', brochure: p.brochure || '',
       lat: p.lat ?? '', lng: p.lng ?? '',
       items: (p.items || []).map((it) => ({ ...it, prj: it.prj || '' })),
     })
     setMode('edit')
+  }
+
+  const handlePdf = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = '' // 같은 파일 다시 고를 수 있게 초기화
+    if (!file) return
+    setUploading(true)
+    const res = await uploadBrochure(file)
+    setUploading(false)
+    if (res && res.ok && res.url) {
+      setDraft((d) => ({ ...d, brochure: res.url }))
+    } else {
+      const msg = { too_big: t('pM.fileTooBig'), not_pdf: t('pM.notPdf'), demo: t('pM.uploadDemo') }
+      window.alert((res && msg[res.error]) || t('pM.uploadFail'))
+    }
   }
 
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
@@ -39,6 +57,7 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
       name: draft.name.trim(), name_en: draft.name_en.trim(),
       desc: draft.desc.trim(), desc_en: draft.desc_en.trim(),
       addr: draft.addr.trim(), addr_en: draft.addr_en.trim(),
+      homepage: (draft.homepage || '').trim(), brochure: draft.brochure || '',
       lat: draft.lat === '' ? null : Number(draft.lat),
       lng: draft.lng === '' ? null : Number(draft.lng),
       items: draft.items
@@ -152,6 +171,35 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
           <label>{t('pM.descEn')}</label>
           <input className="in" value={draft.desc_en} onChange={(e) => set('desc_en', e.target.value)} placeholder="Block piping install" />
         </div>
+      </div>
+
+      <div className="divider" />
+
+      <div className="sec-t"><span>{t('pM.links')}</span></div>
+      <div className="field">
+        <label>{t('pM.homepage')}</label>
+        <input className="in" value={draft.homepage || ''} onChange={(e) => set('homepage', e.target.value)} placeholder="https://example.com" inputMode="url" />
+      </div>
+      <div className="field">
+        <label>{t('pM.brochure')}</label>
+        {draft.brochure ? (
+          <div className="brochure-row">
+            <span className="material-symbols-outlined pdf-ic">picture_as_pdf</span>
+            <span className="bn">{t('pM.brochureSet')}</span>
+            <a className="linkbtn" href={draft.brochure} target="_blank" rel="noreferrer">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>{t('pM.brochureView')}
+            </a>
+            <button className="linkbtn danger" onClick={() => set('brochure', '')}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>{t('pM.brochureRemove')}
+            </button>
+          </div>
+        ) : (
+          <label className={'pdf-upload' + (uploading ? ' busy' : '')}>
+            <span className="material-symbols-outlined">{uploading ? 'progress_activity' : 'upload_file'}</span>
+            {uploading ? t('pM.uploading') : t('pM.uploadPdf')}
+            <input type="file" accept="application/pdf,.pdf" hidden disabled={uploading} onChange={handlePdf} />
+          </label>
+        )}
       </div>
 
       <div className="divider" />

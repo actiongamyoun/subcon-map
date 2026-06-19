@@ -15,7 +15,7 @@
 
 var SHEETS = {
   yard:     { name: '조선소',   headers: ['name', 'name_en', 'addr', 'addr_en', 'lat', 'lng'] },
-  partners: { name: '협력사',   headers: ['id', 'name', 'name_en', 'cat', 'addr', 'addr_en', 'desc', 'desc_en', 'lat', 'lng', 'items'] },
+  partners: { name: '협력사',   headers: ['id', 'name', 'name_en', 'cat', 'addr', 'addr_en', 'desc', 'desc_en', 'lat', 'lng', 'items', 'homepage', 'brochure'] },
   projects: { name: '프로젝트', headers: ['id', 'name', 'name_en', 'note', 'partnerIds'] },
 }
 
@@ -36,6 +36,7 @@ function doPost(e) {
       case 'deletePartner': return json(deletePartner(payload))
       case 'saveProject':   return json(saveProject(payload))
       case 'deleteProject': return json(deleteProject(payload))
+      case 'uploadBrochure': return json(uploadBrochure(payload))
       default:              return json({ ok: false, error: 'unknown action: ' + action })
     }
   } catch (err) {
@@ -63,6 +64,8 @@ function listAll() {
       lat: p.lat ? Number(p.lat) : null,
       lng: p.lng ? Number(p.lng) : null,
       items: parseJson(p.items, []),
+      homepage: p.homepage || '',
+      brochure: p.brochure || '',
     }
   })
 
@@ -99,6 +102,7 @@ function savePartner(p) {
     id, p.name || '', p.name_en || '', p.cat || 'etc',
     p.addr || '', p.addr_en || '', p.desc || '', p.desc_en || '',
     p.lat || '', p.lng || '', JSON.stringify(p.items || []),
+    p.homepage || '', p.brochure || '',
   ]
   var r = findRowById(sh, id)
   if (r > 0) sh.getRange(r, 1, 1, row.length).setValues([row])
@@ -149,11 +153,28 @@ function getSheet(def) {
     sh = ss.insertSheet(def.name)
     sh.getRange(1, 1, 1, def.headers.length).setValues([def.headers])
     sh.setFrozenRows(1)
-  } else if (sh.getLastRow() === 0) {
+    return sh
+  }
+  if (sh.getLastRow() === 0) {
     sh.getRange(1, 1, 1, def.headers.length).setValues([def.headers])
     sh.setFrozenRows(1)
+    return sh
   }
+  ensureHeaders(sh, def) // 기존 시트에 새 칼럼(homepage/brochure 등) 자동 보강
   return sh
+}
+
+// 헤더가 def.headers 보다 적거나 다르면 누락 칼럼 헤더를 추가 (기존 데이터는 보존)
+function ensureHeaders(sh, def) {
+  if (sh.getMaxColumns() < def.headers.length) {
+    sh.insertColumnsAfter(sh.getMaxColumns(), def.headers.length - sh.getMaxColumns())
+  }
+  var cur = sh.getRange(1, 1, 1, def.headers.length).getValues()[0]
+  var changed = false
+  for (var i = 0; i < def.headers.length; i++) {
+    if (String(cur[i] || '') !== def.headers[i]) { cur[i] = def.headers[i]; changed = true }
+  }
+  if (changed) sh.getRange(1, 1, 1, def.headers.length).setValues([cur])
 }
 
 function readObjects(def) {
@@ -191,6 +212,32 @@ function parseJson(s, fallback) {
 
 function genId(prefix) {
   return prefix + '_' + new Date().getTime().toString(36) + Math.floor(Math.random() * 1000)
+}
+
+/* ───────── 회사소개서 PDF 업로드 (구글드라이브) ───────── */
+function uploadBrochure(p) {
+  if (!p || !p.data) return { ok: false, error: 'no file data' }
+  var folder = getBrochureFolder()
+  var bytes = Utilities.base64Decode(p.data)
+  var blob = Utilities.newBlob(bytes, p.mime || 'application/pdf', sanitizeName(p.name))
+  var file = folder.createFile(blob)
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW)
+  } catch (e) { /* 공유 설정 실패해도 파일은 생성됨 */ }
+  return { ok: true, url: 'https://drive.google.com/file/d/' + file.getId() + '/view', id: file.getId() }
+}
+
+function getBrochureFolder() {
+  var NAME = '협력사_회사소개서'
+  var it = DriveApp.getFoldersByName(NAME)
+  if (it.hasNext()) return it.next()
+  return DriveApp.createFolder(NAME)
+}
+
+function sanitizeName(name) {
+  var n = String(name || 'brochure.pdf').replace(/[\\/:*?"<>|]/g, '_')
+  if (!/\.pdf$/i.test(n)) n += '.pdf'
+  return n
 }
 
 function json(obj) {

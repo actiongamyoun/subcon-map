@@ -513,6 +513,54 @@ button { font-family: inherit; }
 /* 모두 보기: 지도 풀 화면(모바일) */
 .content.map-full .mapwrap { flex: 1; }
 
+/* ---------- 협력사 편집: 홈페이지/소개서 ---------- */
+.detail-btn .material-symbols-outlined { color: var(--ink-soft); }
+.pdf-upload {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: 100%; cursor: pointer;
+  border: 1.5px dashed var(--line); background: var(--brand-tint-2); color: var(--brand-deep);
+  padding: 11px 14px; border-radius: 10px; font-size: 13px; font-weight: 700;
+}
+.pdf-upload:hover { border-color: var(--brand); }
+.pdf-upload.busy { opacity: .7; cursor: progress; }
+.pdf-upload .material-symbols-outlined { font-size: 19px; }
+.pdf-upload.busy .material-symbols-outlined { animation: pdfspin 1s linear infinite; }
+@keyframes pdfspin { to { transform: rotate(360deg); } }
+.brochure-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px;
+}
+.brochure-row .pdf-ic { color: #D64545; font-size: 22px; }
+.brochure-row .bn { font-size: 13px; font-weight: 700; color: var(--ink); margin-right: auto; }
+
+/* ---------- 협력사 상세보기 모달 ---------- */
+.detail-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.detail-dist {
+  display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 12px;
+  font-weight: 700; color: var(--brand-deep); background: var(--brand-tint); padding: 4px 10px; border-radius: 999px;
+}
+.detail-dist .material-symbols-outlined { font-size: 15px; }
+.detail-line {
+  display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; color: var(--ink-soft); font-size: 13.5px; line-height: 1.5;
+}
+.detail-line .material-symbols-outlined { font-size: 18px; color: var(--muted); margin-top: 1px; flex-shrink: 0; }
+.detail-links { display: flex; flex-direction: column; gap: 10px; }
+.detail-link {
+  display: flex; align-items: center; gap: 12px; text-decoration: none; transition: .14s;
+  border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; background: var(--surface);
+}
+.detail-link:hover { border-color: var(--brand); background: var(--brand-tint-2); transform: translateY(-1px); box-shadow: var(--shadow); }
+.detail-link .dl-ic { font-size: 26px; color: var(--brand); }
+.detail-link .dl-ic.pdf { color: #D64545; }
+.detail-link .dl-body { flex: 1; min-width: 0; }
+.detail-link .dl-t { font-size: 14px; font-weight: 800; color: var(--ink); }
+.detail-link .dl-s { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.detail-link .dl-go { font-size: 18px; color: var(--muted); }
+.detail-empty {
+  display: flex; align-items: center; gap: 8px; justify-content: center; color: var(--muted);
+  font-size: 13px; padding: 18px; border: 1px dashed var(--line); border-radius: 12px;
+}
+.detail-empty .material-symbols-outlined { font-size: 19px; }
+
 /* ---------- Print (PDF 출력) ---------- */
 .print-root { display: none; }
 

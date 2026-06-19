@@ -7,6 +7,7 @@ import Gantt from './components/Gantt.jsx'
 import PrintView from './components/PrintView.jsx'
 import YardModal from './components/YardModal.jsx'
 import PartnerModal from './components/PartnerModal.jsx'
+import PartnerDetailModal from './components/PartnerDetailModal.jsx'
 import ProjectModal from './components/ProjectModal.jsx'
 import { LangProvider, useLang } from './lib/lang.jsx'
 import {
@@ -44,6 +45,7 @@ function AppInner() {
   const [yardOpen, setYardOpen] = useState(false)
   const [partnersOpen, setPartnersOpen] = useState(false)
   const [projectsOpen, setProjectsOpen] = useState(false)
+  const [detailPartner, setDetailPartner] = useState(null)
   const [printData, setPrintData] = useState(null)
 
   // 초기 로드
@@ -205,6 +207,7 @@ function AppInner() {
             region={region}
             onPickRegion={pickRegion}
             showAll={showAll}
+            onDetail={setDetailPartner}
           />
           <div className={'content' + (showAll ? ' map-full' : '')}>
             <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} showAll={showAll} onRouted={onRouted} />
@@ -231,6 +234,14 @@ function AppInner() {
           onClose={() => setProjectsOpen(false)}
           onSave={handleSaveProject}
           onDelete={handleDeleteProject}
+        />
+      )}
+
+      {detailPartner && (
+        <PartnerDetailModal
+          partner={partners.find((p) => p.id === detailPartner.id) || detailPartner}
+          distance={distances[detailPartner.id]}
+          onClose={() => setDetailPartner(null)}
         />
       )}
 

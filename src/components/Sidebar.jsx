@@ -41,6 +41,7 @@ export default function Sidebar({
   partners, selectedId, onSelect,
   projectMode, activeProject, checkedIds, onToggleCheck,
   distances, regions = [REGION_ALL], region = REGION_ALL, onPickRegion, showAll = false,
+  onDetail,
 }) {
   const { t, L } = useLang()
   const [copiedId, setCopiedId] = useState(null)
@@ -116,6 +117,13 @@ export default function Sidebar({
                   <div className="name">
                     <span className="nm-text">{L(p, 'name')}</span>
                     <CatBadge cat={p.cat} />
+                    <button
+                      className="share-btn detail-btn"
+                      onClick={(e) => { e.stopPropagation(); onDetail && onDetail(p) }}
+                      title={t('detail.open')}
+                    >
+                      <span className="material-symbols-outlined">info</span>
+                    </button>
                     <button
                       className="share-btn"
                       onClick={(e) => { e.stopPropagation(); sharePartner(p) }}

@@ -54,6 +54,29 @@ export const deletePartner = (id) => post('deletePartner', { id })
 export const saveProject = (project) => post('saveProject', project)
 export const deleteProject = (id) => post('deleteProject', { id })
 
+// ── 회사소개서 PDF 업로드 (GAS → 구글드라이브) ────────────────
+// 프록시 본문 한도(~4.5MB) 고려 → PDF 3MB 이하만 허용
+export const MAX_BROCHURE_BYTES = 3 * 1024 * 1024
+export async function uploadBrochure(file) {
+  if (DEMO) return { ok: false, error: 'demo' }
+  if (!file) return { ok: false, error: 'no file' }
+  if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name || '')) {
+    return { ok: false, error: 'not_pdf' }
+  }
+  if (file.size > MAX_BROCHURE_BYTES) return { ok: false, error: 'too_big' }
+  const data = await fileToBase64(file)
+  return post('uploadBrochure', { name: file.name, mime: file.type || 'application/pdf', data })
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result).split(',')[1] || '') // "data:...;base64," 접두 제거
+    r.onerror = () => reject(new Error('read failed'))
+    r.readAsDataURL(file)
+  })
+}
+
 // ── 길찾기 ───────────────────────────────────────────────────
 // 반환: { path:[[lat,lng]...], distance(m), duration(s), real:boolean }
 export async function getDirections(origin, dest) {
