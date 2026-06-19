@@ -210,7 +210,7 @@ function AppInner() {
             onDetail={setDetailPartner}
           />
           <div className={'content' + (showAll ? ' map-full' : '')}>
-            <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} showAll={showAll} onRouted={onRouted} />
+            <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} showAll={showAll} onRouted={onRouted} onReset={() => setSelectedId(null)} />
             {!showAll && <Gantt partner={selectedPartner} activeProject={activeProject} projects={projects} />}
           </div>
         </div>

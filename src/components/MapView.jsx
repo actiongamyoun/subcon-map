@@ -12,16 +12,9 @@ const DEST_ZOOM = 16
 const FIT_PADDING = [70, 70]
 const CLUSTER_PX = 50 // 이 픽셀 이내 핀끼리 묶음
 
-function compassBearing(a, b) {
-  const toRad = (d) => (d * Math.PI) / 180
-  const f1 = toRad(a.lat), f2 = toRad(b.lat), dl = toRad(b.lng - a.lng)
-  const y = Math.sin(dl) * Math.cos(f2)
-  const x = Math.cos(f1) * Math.sin(f2) - Math.sin(f1) * Math.cos(f2) * Math.cos(dl)
-  return (Math.atan2(y, x) * 180) / Math.PI
-}
 const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
-export default function MapView({ yard, partner, mapPartners = [], showAll = false, onRouted }) {
+export default function MapView({ yard, partner, mapPartners = [], showAll = false, onRouted, onReset }) {
   const { t, L: Lz, lang } = useLang()
   const boxRef = useRef(null)
   const mapRef = useRef(null)
@@ -103,6 +96,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
     } else {
       exitOverview()
       if (partner) prepareRoute(partner)
+      else clearRoute()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAll, partner?.id, ready])
@@ -271,11 +265,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
       const sub = latlngs.slice(0, at.idx); sub.push(pos)
       liveRef.current.setLatLngs(sub)
       carRef.current.setLatLng(pos)
-      const el = carRef.current.getElement()
-      if (el) {
-        const inner = el.querySelector('.car-marker')
-        if (inner) inner.style.transform = `rotate(${compassBearing(at.from, at.to)}deg)`
-      }
+      // 자동차 아이콘은 회전시키지 않음(회전하면 뒤집혀 보임) — 경로를 따라 이동만
       if (tt < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
@@ -288,10 +278,25 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
     rafRef.current = requestAnimationFrame(frame)
   }
 
+  // 단일 경로 그래픽/상태 제거 (목적지 핀·경로선·자동차·거리 배너)
+  function clearRoute() {
+    ++runIdRef.current
+    cancelAnimationFrame(rafRef.current)
+    cancelAnimationFrame(countRafRef.current)
+    if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null }
+    if (faintRef.current) { faintRef.current.remove(); faintRef.current = null }
+    if (liveRef.current) { liveRef.current.remove(); liveRef.current = null }
+    if (carRef.current) { carRef.current.remove(); carRef.current = null }
+    routeDataRef.current = null
+    setReadout(null); setRouteReady(false); setPlaying(false); setErrMsg('')
+  }
+
   function goOrigin() {
     const map = mapRef.current
     if (!map) return
+    clearRoute()                 // 기존에 형성된 경로 삭제
     map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
+    if (onReset) onReset()       // 사이드 선택 해제 → 같은 협력사 다시 눌러도 경로 재표시 가능
   }
 
   const showSelectHint = ready && !partner && !showAll && !errMsg
@@ -389,7 +394,7 @@ function makeCluster(map, pos, count, onClick) {
 
 function carIcon() {
   return L.divIcon({
-    html: '<div class="car-marker"><div class="disc"><span class="material-symbols-outlined">navigation</span></div></div>',
+    html: '<div class="car-marker"><div class="disc"><span class="material-symbols-outlined">directions_car</span></div></div>',
     className: 'car-divicon', iconSize: [0, 0], iconAnchor: [0, 0],
   })
 }
