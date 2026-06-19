@@ -169,14 +169,17 @@ export default function MapView({ yard, partner, onRouted }) {
         if (inner) inner.style.transform = `rotate(${compassBearing(at.from, at.to)}deg)`
       }
 
-      map.setView(pos, FOLLOW_ZOOM, { animate: false })
+      if (Number.isFinite(pos[0]) && Number.isFinite(pos[1])) {
+        map.setView(pos, FOLLOW_ZOOM, { animate: false })
+      }
 
       if (tt < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
         liveRef.current.setLatLngs(latlngs)
-        // 도착 연출: 목적지로 부드럽게 줌인(크게) + 상단 거리 배너
-        map.flyTo([dest.lat, dest.lng], DEST_ZOOM, { duration: 1.4 })
+        // 도착 연출: 목적지로 확실히 줌인 (flyTo는 보간 중 줌이 어긋날 수 있어 setView 사용)
+        map.invalidateSize()
+        map.setView([Number(dest.lat), Number(dest.lng)], DEST_ZOOM, { animate: true })
         setReadout({ km, etaMin, sim: !dir.real })
         if (onRouted) onRouted(p.id, { km, sim: !dir.real })
       }
