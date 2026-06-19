@@ -178,8 +178,8 @@ button { font-family: inherit; }
 
 .card .body { min-width: 0; flex: 1; }
 .card .name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
-.badge .material-symbols-outlined { font-size: 13px; }
+.badge { font-size: 11px; font-weight: 700; padding: 3px 9px 3px 7px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.badge .material-symbols-outlined { font-size: 15px; line-height: 1; font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20; }
 .cat-pipe    { background: #E6F0FB; color: #2563A8; }
 .cat-block   { background: #E2F5F4; color: #0A7E7C; }
 .cat-accom   { background: #EFEAFB; color: #6B45B0; }
