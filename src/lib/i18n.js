@@ -46,6 +46,8 @@ export const STRINGS = {
     'loc.searchBtn': '검색',
     'loc.searching': '검색 중…',
     'loc.noResults': '검색 결과가 없습니다',
+    'loc.mapPick': '지도에서 선택',
+    'loc.mapHint': '지도를 클릭해 위치 지정 · 핀 드래그로 미세조정',
 
     'gantt.title': '진행 일정',
     'gantt.noPartner': '협력사 미선택',
@@ -180,6 +182,8 @@ export const STRINGS = {
     'loc.searchBtn': 'Search',
     'loc.searching': 'Searching…',
     'loc.noResults': 'No results found',
+    'loc.mapPick': 'Pick on map',
+    'loc.mapHint': 'Click the map to set location · drag the pin to fine-tune',
 
     'gantt.title': 'Schedule',
     'gantt.noPartner': 'No partner selected',

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Modal from './Modal.jsx'
 import LocationSearch from './LocationSearch.jsx'
+import MapPicker from './MapPicker.jsx'
 import { CATEGORY_ORDER, CATEGORIES, STATUS_ORDER } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
@@ -118,6 +119,11 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
       <div className="field">
         <label>{t('loc.search')} <span className="hint">{t('loc.hint')}</span></label>
         <LocationSearch onPick={onPick} />
+      </div>
+
+      <div className="field">
+        <label>{t('loc.mapPick')} <span className="hint">{t('loc.mapHint')}</span></label>
+        <MapPicker lat={draft.lat} lng={draft.lng} onPick={(p) => setDraft((d) => ({ ...d, lat: p.lat.toFixed(6), lng: p.lng.toFixed(6) }))} />
       </div>
 
       <div className="field">
