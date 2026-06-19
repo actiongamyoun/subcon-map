@@ -12,6 +12,7 @@ import { LangProvider, useLang } from './lib/lang.jsx'
 import {
   loadData, isDemo, saveYard, savePartner, deletePartner, saveProject, deleteProject,
 } from './lib/api.js'
+import { regionOf, REGION_ALL } from './lib/constants.js'
 
 const newId = (p) => p + '_' + Date.now().toString(36) + Math.floor(Math.random() * 1000)
 
@@ -36,6 +37,8 @@ function AppInner() {
 
   const [selectedId, setSelectedId] = useState(null)
   const [activeProjectId, setActiveProjectId] = useState(null)
+  const [region, setRegion] = useState(REGION_ALL)
+  const [showAll, setShowAll] = useState(false)
   const [distances, setDistances] = useState({})
 
   const [yardOpen, setYardOpen] = useState(false)
@@ -73,14 +76,33 @@ function AppInner() {
     () => new Set(activeProject ? activeProject.partnerIds : []),
     [activeProject]
   )
-  // 전체보기 범위: 호선 선택 시 그 멤버, 전체면 모든 협력사
-  const mapPartners = useMemo(
-    () => (activeProject ? partners.filter((p) => activeProject.partnerIds.includes(p.id)) : partners),
-    [partners, activeProject]
+  // 주소에서 추출한 시/도 목록 (전체 + 등장 지역들)
+  const regions = useMemo(() => {
+    const set = new Set()
+    partners.forEach((p) => { if (p.lat && p.lng) set.add(regionOf(p.addr)) })
+    return [REGION_ALL, ...Array.from(set).sort()]
+  }, [partners])
+
+  // 사이드 목록: 지역 필터 적용
+  const listPartners = useMemo(
+    () => (region === REGION_ALL ? partners : partners.filter((p) => regionOf(p.addr) === region)),
+    [partners, region]
   )
+
+  // 모두 보기 지도 핀: 호선 멤버(선택 시) ∩ 지역
+  const mapPartners = useMemo(() => {
+    let arr = activeProject ? partners.filter((p) => activeProject.partnerIds.includes(p.id)) : partners
+    if (region !== REGION_ALL) arr = arr.filter((p) => regionOf(p.addr) === region)
+    return arr
+  }, [partners, activeProject, region])
 
   /* ── 핸들러 ── */
   const onRouted = (id, info) => setDistances((d) => ({ ...d, [id]: info }))
+
+  // 드롭다운에서 지역/전체 선택 → 모두 보기 진입 (단일 선택 해제)
+  const pickRegion = (r) => { setRegion(r); setShowAll(true); setSelectedId(null) }
+  // 협력사 선택 → 단일 경로 모드 (모두 보기 해제)
+  const selectPartner = (id) => { setSelectedId(id); setShowAll(false) }
 
   const onToggleCheck = (partnerId) => {
     if (!activeProject) return
@@ -171,18 +193,22 @@ function AppInner() {
 
         <div className="main">
           <Sidebar
-            partners={partners}
+            partners={listPartners}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={selectPartner}
             projectMode={projectMode}
             activeProject={activeProject}
             checkedIds={checkedIds}
             onToggleCheck={onToggleCheck}
             distances={distances}
+            regions={regions}
+            region={region}
+            onPickRegion={pickRegion}
+            showAll={showAll}
           />
-          <div className="content">
-            <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} onRouted={onRouted} onShowAll={() => setSelectedId(null)} />
-            <Gantt partner={selectedPartner} activeProject={activeProject} projects={projects} />
+          <div className={'content' + (showAll ? ' map-full' : '')}>
+            <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} showAll={showAll} onRouted={onRouted} />
+            {!showAll && <Gantt partner={selectedPartner} activeProject={activeProject} projects={projects} />}
           </div>
         </div>
       </div>
