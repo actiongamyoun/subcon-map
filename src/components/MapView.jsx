@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { geocode } from '../lib/kakao.js'
 import { getDirections } from '../lib/api.js'
 import { pathMetrics, pointAt } from '../lib/geo.js'
-import { DEFAULT_YARD } from '../lib/constants.js'
+import { DEFAULT_YARD, catIcon } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
 const ORIGIN_ZOOM = 14   // 조선소(출발지) 보여줄 때 줌
@@ -20,7 +20,7 @@ function compassBearing(a, b) {
 }
 const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
-export default function MapView({ yard, partner, onRouted }) {
+export default function MapView({ yard, partner, mapPartners = [], onRouted, onShowAll }) {
   const { t, L: Lz, lang } = useLang()
   const boxRef = useRef(null)
   const mapRef = useRef(null)
@@ -29,6 +29,7 @@ export default function MapView({ yard, partner, onRouted }) {
   const carRef = useRef(null)
   const faintRef = useRef(null)
   const liveRef = useRef(null)
+  const allMarkersRef = useRef([])
   const rafRef = useRef(null)
   const countRafRef = useRef(null)
   const runIdRef = useRef(0)
@@ -37,6 +38,7 @@ export default function MapView({ yard, partner, onRouted }) {
   const [ready, setReady] = useState(false)
   const [routeReady, setRouteReady] = useState(false)
   const [playing, setPlaying] = useState(false)
+  const [showAll, setShowAll] = useState(false)
   const [readout, setReadout] = useState(null)
   const [displayKm, setDisplayKm] = useState(0)
   const [errMsg, setErrMsg] = useState('')
@@ -119,6 +121,9 @@ export default function MapView({ yard, partner, onRouted }) {
     setReadout(null)
     setPlaying(false)
     setRouteReady(false)
+    // 전체보기 상태였다면 해제 + 전체 핀 제거
+    if (allMarkersRef.current.length) { allMarkersRef.current.forEach((m) => m.remove()); allMarkersRef.current = [] }
+    setShowAll(false)
 
     let dest = p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : await geocode(p.addr)
     if (runId !== runIdRef.current) return
@@ -208,7 +213,69 @@ export default function MapView({ yard, partner, onRouted }) {
     map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
   }
 
-  const showSelectHint = ready && !partner && !errMsg
+  // 현재 범위(호선 선택 시 그 멤버, 전체면 전부)의 협력사를 지도에 한 번에 핀으로 표시
+  function showAllPartners() {
+    const map = mapRef.current
+    if (!map) return
+    ++runIdRef.current // 진행 중인 경로 준비/애니메이션 취소
+    cancelAnimationFrame(rafRef.current)
+    cancelAnimationFrame(countRafRef.current)
+    setErrMsg('')
+    setReadout(null)
+    setPlaying(false)
+    setRouteReady(false)
+
+    // 단일 경로 그래픽 제거
+    if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null }
+    if (carRef.current) carRef.current.remove()
+    if (faintRef.current) { faintRef.current.remove(); faintRef.current = null }
+    if (liveRef.current) { liveRef.current.remove(); liveRef.current = null }
+    routeDataRef.current = null
+
+    // 기존 전체 핀 제거 후 다시 그림
+    allMarkersRef.current.forEach((m) => m.remove())
+    allMarkersRef.current = []
+
+    const pts = []
+    mapPartners.forEach((p) => {
+      if (!(p.lat && p.lng)) return
+      const pos = { lat: Number(p.lat), lng: Number(p.lng) }
+      allMarkersRef.current.push(makePin(map, pos, 'multi', Lz(p, 'name'), catIcon(p.cat)))
+      pts.push([pos.lat, pos.lng])
+    })
+
+    map.invalidateSize()
+    if (pts.length) {
+      map.fitBounds(L.latLngBounds([...pts, [origin.lat, origin.lng]]), { padding: FIT_PADDING, animate: true })
+    } else {
+      map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
+    }
+    setShowAll(true)
+    if (onShowAll) onShowAll() // 단일 선택 해제 → 이후 사이드 목록에서 다시 선택 가능
+  }
+
+  // 전체보기 중 범위(필터)가 바뀌면 핀 다시 표시
+  useEffect(() => {
+    if (!ready || !showAll) return
+    showAllPartners()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapPartners])
+
+  // 전체보기 중 언어 변경 시 핀 라벨만 갱신 (줌 유지)
+  useEffect(() => {
+    if (!ready || !showAll || !mapRef.current) return
+    const map = mapRef.current
+    allMarkersRef.current.forEach((m) => m.remove())
+    allMarkersRef.current = []
+    mapPartners.forEach((p) => {
+      if (!(p.lat && p.lng)) return
+      allMarkersRef.current.push(makePin(map, { lat: Number(p.lat), lng: Number(p.lng) }, 'multi', Lz(p, 'name'), catIcon(p.cat)))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
+
+  const hasMappable = mapPartners.some((p) => p.lat && p.lng)
+  const showSelectHint = ready && !partner && !showAll && !errMsg
   const showPlayHint = ready && !!partner && routeReady && !playing && !readout && !errMsg
 
   return (
@@ -261,6 +328,13 @@ export default function MapView({ yard, partner, onRouted }) {
           <span className="material-symbols-outlined">anchor</span>{t('map.toOrigin')}
         </button>
         <button
+          className={'map-btn' + (showAll ? ' active' : '')}
+          onClick={showAllPartners}
+          disabled={!ready || !hasMappable}
+        >
+          <span className="material-symbols-outlined">pin_drop</span>{t('map.showAll')}
+        </button>
+        <button
           className={'map-btn primary' + (showPlayHint ? ' pulse' : '')}
           onClick={playRoute}
           disabled={!routeReady || playing}
@@ -278,8 +352,8 @@ function resolveOrigin(yard) {
   return { lat: DEFAULT_YARD.lat, lng: DEFAULT_YARD.lng }
 }
 
-function makePin(map, pos, kind, label) {
-  const icon = kind === 'origin' ? 'anchor' : 'apartment'
+function makePin(map, pos, kind, label, iconOverride) {
+  const icon = iconOverride || (kind === 'origin' ? 'anchor' : 'apartment')
   const html =
     `<div class="pin ${kind}"><div class="dot"><span class="material-symbols-outlined">${icon}</span></div>` +
     `<div class="tag">${escapeHtml(label)}</div></div>`

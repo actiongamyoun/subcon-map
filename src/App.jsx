@@ -73,6 +73,11 @@ function AppInner() {
     () => new Set(activeProject ? activeProject.partnerIds : []),
     [activeProject]
   )
+  // 전체보기 범위: 호선 선택 시 그 멤버, 전체면 모든 협력사
+  const mapPartners = useMemo(
+    () => (activeProject ? partners.filter((p) => activeProject.partnerIds.includes(p.id)) : partners),
+    [partners, activeProject]
+  )
 
   /* ── 핸들러 ── */
   const onRouted = (id, info) => setDistances((d) => ({ ...d, [id]: info }))
@@ -176,7 +181,7 @@ function AppInner() {
             distances={distances}
           />
           <div className="content">
-            <MapView yard={yard} partner={selectedPartner} onRouted={onRouted} />
+            <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} onRouted={onRouted} onShowAll={() => setSelectedId(null)} />
             <Gantt partner={selectedPartner} activeProject={activeProject} projects={projects} />
           </div>
         </div>
