@@ -463,6 +463,56 @@ button { font-family: inherit; }
 .demo-banner .material-symbols-outlined { font-size: 16px; color: #ffd9c9; }
 .demo-banner b { font-weight: 700; }
 
+/* ---------- 지역(시/도) 드롭다운 ---------- */
+.side-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sh-left { min-width: 0; }
+.region-menu { position: relative; flex-shrink: 0; }
+.region-btn {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border-radius: 999px;
+  font-family: var(--font); font-size: 11.5px; font-weight: 700; color: var(--ink-soft); max-width: 132px;
+}
+.region-btn:hover { border-color: var(--brand); }
+.region-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.region-btn.active .material-symbols-outlined { color: #fff; }
+.region-btn .material-symbols-outlined { font-size: 15px; color: var(--brand-deep); }
+.region-btn .rb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.region-btn .rb-caret { margin-left: -1px; font-size: 16px; }
+.region-scrim { position: fixed; inset: 0; z-index: 1400; }
+.region-list {
+  position: absolute; right: 0; top: calc(100% + 5px); z-index: 1401; min-width: 130px; max-height: 50vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 5px;
+}
+.region-item {
+  appearance: none; border: none; background: none; cursor: pointer; width: 100%; text-align: left;
+  display: flex; align-items: center; gap: 7px; padding: 8px 9px; border-radius: 8px;
+  font-family: var(--font); font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap;
+}
+.region-item:hover { background: var(--brand-tint-2); }
+.region-item.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 800; }
+.region-item .material-symbols-outlined { font-size: 16px; color: var(--brand-deep); }
+
+/* ---------- 카드 공유 버튼 ---------- */
+.card .name .nm-text { overflow: hidden; text-overflow: ellipsis; }
+.share-btn {
+  margin-left: auto; appearance: none; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--brand-deep); flex-shrink: 0;
+}
+.share-btn:hover { border-color: var(--brand); background: var(--brand-tint-2); }
+.share-btn .material-symbols-outlined { font-size: 16px; }
+
+/* ---------- 클러스터 핀 (모두 보기) ---------- */
+.cl-pin { position: relative; transform: translate(-50%, -50%); }
+.cl-dot {
+  min-width: 34px; height: 34px; padding: 0 6px; border-radius: 999px; background: var(--brand);
+  border: 3px solid #fff; box-shadow: 0 5px 13px rgba(12,36,64,.32); color: #fff; font-family: var(--mono);
+  font-weight: 800; font-size: 14px; display: grid; place-items: center; cursor: pointer;
+}
+.cl-dot:hover { background: var(--brand-deep); }
+
+/* 모두 보기: 지도 풀 화면(모바일) */
+.content.map-full .mapwrap { flex: 1; }
+
 /* ---------- Print (PDF 출력) ---------- */
 .print-root { display: none; }
 
@@ -490,6 +540,7 @@ button { font-family: inherit; }
   .cards { display: flex; gap: 10px; overflow-x: auto; padding: 11px 12px; }
   .card { min-width: 232px; margin-bottom: 0; flex: none; }
   .mapwrap { flex: none; height: 48vh; }
+  .content.map-full .mapwrap { flex: 1; height: auto; }
   .gantt { flex: none; min-height: 240px; }
   .itemhead, .itemrow, .itemhead-prj, .itemrow-prj { grid-template-columns: 1fr 1fr; }
   .itemrow .del { grid-column: 2; justify-self: end; }

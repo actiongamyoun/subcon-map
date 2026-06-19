@@ -7,9 +7,10 @@ import { pathMetrics, pointAt } from '../lib/geo.js'
 import { DEFAULT_YARD, catIcon } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
-const ORIGIN_ZOOM = 14   // 조선소(출발지) 보여줄 때 줌
-const DEST_ZOOM = 16     // 도착 시 목적지 클로즈업 줌
+const ORIGIN_ZOOM = 14
+const DEST_ZOOM = 16
 const FIT_PADDING = [70, 70]
+const CLUSTER_PX = 50 // 이 픽셀 이내 핀끼리 묶음
 
 function compassBearing(a, b) {
   const toRad = (d) => (d * Math.PI) / 180
@@ -20,7 +21,7 @@ function compassBearing(a, b) {
 }
 const easeIO = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
-export default function MapView({ yard, partner, mapPartners = [], onRouted, onShowAll }) {
+export default function MapView({ yard, partner, mapPartners = [], showAll = false, onRouted }) {
   const { t, L: Lz, lang } = useLang()
   const boxRef = useRef(null)
   const mapRef = useRef(null)
@@ -29,7 +30,9 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
   const carRef = useRef(null)
   const faintRef = useRef(null)
   const liveRef = useRef(null)
-  const allMarkersRef = useRef([])
+  const clusterMarkersRef = useRef([])
+  const mapPartnersRef = useRef([])
+  const zoomFnRef = useRef(null)
   const rafRef = useRef(null)
   const countRafRef = useRef(null)
   const runIdRef = useRef(0)
@@ -38,7 +41,6 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
   const [ready, setReady] = useState(false)
   const [routeReady, setRouteReady] = useState(false)
   const [playing, setPlaying] = useState(false)
-  const [showAll, setShowAll] = useState(false)
   const [readout, setReadout] = useState(null)
   const [displayKm, setDisplayKm] = useState(0)
   const [errMsg, setErrMsg] = useState('')
@@ -54,13 +56,12 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     return lang === 'en' ? `${h} hr ${m} min` : `${h}시간 ${m}분`
   }
 
-  // 지도 초기화 (OpenStreetMap) — 조선소를 적절히 확대해 표시
+  // 지도 초기화
   useEffect(() => {
     const map = L.map(boxRef.current, { zoomControl: true, attributionControl: true })
       .setView([origin.lat, origin.lng], ORIGIN_ZOOM)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19, attribution: '&copy; OpenStreetMap',
     }).addTo(map)
     mapRef.current = map
     originMarkerRef.current = makePin(map, origin, 'origin', yardLabel)
@@ -76,7 +77,7 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 조선소(출발지) 변경 또는 언어 변경 시 origin 핀 갱신
+  // 출발지/언어 변경 시 origin 핀 갱신
   useEffect(() => {
     const map = mapRef.current
     if (!ready || !map) return
@@ -85,7 +86,7 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yardLabel, origin.lat, origin.lng, ready])
 
-  // 언어 변경 시 목적지 핀 라벨 갱신
+  // 언어 변경 시 목적지 핀 라벨 갱신 (단일 모드)
   useEffect(() => {
     if (!ready || !partner || !destMarkerRef.current || !mapRef.current) return
     const pos = destMarkerRef.current.getLatLng()
@@ -94,14 +95,32 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang])
 
-  // 협력사 선택 → 경로 "준비"(대략적 위치 표시), 자동 이동은 안 함
+  // 모드 전환: 모두 보기 ↔ 단일 경로
   useEffect(() => {
-    if (!ready || !partner) return
-    prepareRoute(partner)
+    if (!ready) return
+    if (showAll) {
+      enterOverview()
+    } else {
+      exitOverview()
+      if (partner) prepareRoute(partner)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partner?.id, ready])
+  }, [showAll, partner?.id, ready])
 
-  // 거리 카운트업 애니메이션
+  // 모두 보기 중 범위(지역/호선) 변경 → 그 범위로 다시 맞춤
+  useEffect(() => {
+    mapPartnersRef.current = mapPartners
+    if (ready && showAll) setTimeout(fitAndDraw, 60)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapPartners])
+
+  // 모두 보기 중 언어 변경 → 핀 라벨만 갱신 (줌 유지)
+  useEffect(() => {
+    if (ready && showAll) drawOverview()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang])
+
+  // 거리 카운트업
   useEffect(() => {
     cancelAnimationFrame(countRafRef.current)
     if (!readout) { setDisplayKm(0); return }
@@ -119,19 +138,82 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     return () => cancelAnimationFrame(countRafRef.current)
   }, [readout])
 
-  // 1) 협력사 선택 → 목적지 핀 + 경로(흐리게) 그리고 출발+도착이 다 보이게 축소
+  /* ── 모두 보기 (클러스터) ── */
+  function drawOverview() {
+    const map = mapRef.current
+    if (!map) return
+    clusterMarkersRef.current.forEach((m) => m.remove())
+    clusterMarkersRef.current = []
+    const list = mapPartnersRef.current.filter((p) => p.lat && p.lng)
+    const pts = list.map((p) => {
+      const ll = L.latLng(Number(p.lat), Number(p.lng))
+      return { p, ll, pt: map.latLngToContainerPoint(ll) }
+    })
+    const used = new Array(pts.length).fill(false)
+    for (let i = 0; i < pts.length; i++) {
+      if (used[i]) continue
+      const group = [pts[i]]; used[i] = true
+      for (let j = i + 1; j < pts.length; j++) {
+        if (!used[j] && pts[i].pt.distanceTo(pts[j].pt) <= CLUSTER_PX) { group.push(pts[j]); used[j] = true }
+      }
+      if (group.length === 1) {
+        const g = group[0]
+        clusterMarkersRef.current.push(makePin(map, { lat: g.ll.lat, lng: g.ll.lng }, 'multi', Lz(g.p, 'name'), catIcon(g.p.cat)))
+      } else {
+        const lat = group.reduce((s, g) => s + g.ll.lat, 0) / group.length
+        const lng = group.reduce((s, g) => s + g.ll.lng, 0) / group.length
+        clusterMarkersRef.current.push(makeCluster(map, { lat, lng }, group.length, () => {
+          map.setView([lat, lng], Math.min(18, map.getZoom() + 2), { animate: true })
+        }))
+      }
+    }
+  }
+
+  // 모두 보기 범위로 지도 맞춤 + 클러스터 그림 + 줌 리스너 부착
+  function fitAndDraw() {
+    const map = mapRef.current
+    if (!map) return
+    map.invalidateSize()
+    const pts = mapPartnersRef.current.filter((p) => p.lat && p.lng).map((p) => [Number(p.lat), Number(p.lng)])
+    if (pts.length) map.fitBounds(L.latLngBounds([...pts, [origin.lat, origin.lng]]), { padding: FIT_PADDING, animate: true })
+    else map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
+    drawOverview()
+    if (zoomFnRef.current) map.off('zoomend', zoomFnRef.current)
+    zoomFnRef.current = () => drawOverview()
+    map.on('zoomend', zoomFnRef.current)
+  }
+
+  function enterOverview() {
+    const map = mapRef.current
+    if (!map) return
+    ++runIdRef.current
+    cancelAnimationFrame(rafRef.current)
+    cancelAnimationFrame(countRafRef.current)
+    setErrMsg(''); setReadout(null); setPlaying(false); setRouteReady(false)
+    if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null }
+    if (carRef.current) carRef.current.remove()
+    if (faintRef.current) { faintRef.current.remove(); faintRef.current = null }
+    if (liveRef.current) { liveRef.current.remove(); liveRef.current = null }
+    routeDataRef.current = null
+    // 일정칸이 접히며 지도가 커진 뒤 크기 반영 → fit → 그림
+    setTimeout(fitAndDraw, 60)
+  }
+
+  function exitOverview() {
+    const map = mapRef.current
+    if (map && zoomFnRef.current) { map.off('zoomend', zoomFnRef.current); zoomFnRef.current = null }
+    clusterMarkersRef.current.forEach((m) => m.remove())
+    clusterMarkersRef.current = []
+    setTimeout(() => { if (mapRef.current) mapRef.current.invalidateSize() }, 60)
+  }
+
+  /* ── 단일 경로 ── */
   async function prepareRoute(p) {
     const map = mapRef.current
     if (!map) return
     const runId = ++runIdRef.current
     cancelAnimationFrame(rafRef.current)
-    setErrMsg('')
-    setReadout(null)
-    setPlaying(false)
-    setRouteReady(false)
-    // 전체보기 상태였다면 해제 + 전체 핀 제거
-    if (allMarkersRef.current.length) { allMarkersRef.current.forEach((m) => m.remove()); allMarkersRef.current = [] }
-    setShowAll(false)
+    setErrMsg(''); setReadout(null); setPlaying(false); setRouteReady(false)
 
     let dest = p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : await geocode(p.addr)
     if (runId !== runIdRef.current) return
@@ -165,23 +247,19 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     if (onRouted) onRouted(p.id, { km, sim: !dir.real })
   }
 
-  // 2) 경로 보기 → 차량이 경로를 따라 이동(카메라 고정 = 어지럼 방지) → 3) 도착 시 목적지 확대
   function playRoute() {
     const map = mapRef.current
     const rd = routeDataRef.current
     if (!map || !rd) return
     const runId = ++runIdRef.current
     cancelAnimationFrame(rafRef.current)
-    setReadout(null)
-    setPlaying(true)
+    setReadout(null); setPlaying(true)
 
     const { dest, path, latlngs, metrics, km, etaMin, sim, bounds } = rd
-    // 전체 경로가 보이는 축소 상태로 고정 (따라가지 않음)
     map.fitBounds(bounds, { padding: FIT_PADDING, animate: false })
     carRef.current.setLatLng(latlngs[0])
     liveRef.current.setLatLngs([latlngs[0]])
 
-    // 거리에 비례한 편안한 속도 (3.5~7초)
     const TRAVEL_MS = Math.min(7000, Math.max(3500, parseFloat(km) * 280))
     let t0 = null
     function frame(ts) {
@@ -190,7 +268,6 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
       const tt = easeIO(Math.min(1, (ts - t0) / TRAVEL_MS))
       const at = pointAt(path, metrics, tt)
       const pos = [at.lat, at.lng]
-
       const sub = latlngs.slice(0, at.idx); sub.push(pos)
       liveRef.current.setLatLngs(sub)
       carRef.current.setLatLng(pos)
@@ -199,13 +276,10 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
         const inner = el.querySelector('.car-marker')
         if (inner) inner.style.transform = `rotate(${compassBearing(at.from, at.to)}deg)`
       }
-      // 카메라 고정 — 축소 상태 유지
-
       if (tt < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
         liveRef.current.setLatLngs(latlngs)
-        // 도착: 목적지로 확대
         map.setView([Number(dest.lat), Number(dest.lng)], DEST_ZOOM, { animate: true })
         setPlaying(false)
         setReadout({ km, etaMin, sim })
@@ -214,77 +288,14 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
     rafRef.current = requestAnimationFrame(frame)
   }
 
-  // 출발지(조선소)로 이동 + 적절히 확대
   function goOrigin() {
     const map = mapRef.current
     if (!map) return
     map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
   }
 
-  // 현재 범위(호선 선택 시 그 멤버, 전체면 전부)의 협력사를 지도에 한 번에 핀으로 표시
-  function showAllPartners() {
-    const map = mapRef.current
-    if (!map) return
-    ++runIdRef.current // 진행 중인 경로 준비/애니메이션 취소
-    cancelAnimationFrame(rafRef.current)
-    cancelAnimationFrame(countRafRef.current)
-    setErrMsg('')
-    setReadout(null)
-    setPlaying(false)
-    setRouteReady(false)
-
-    // 단일 경로 그래픽 제거
-    if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null }
-    if (carRef.current) carRef.current.remove()
-    if (faintRef.current) { faintRef.current.remove(); faintRef.current = null }
-    if (liveRef.current) { liveRef.current.remove(); liveRef.current = null }
-    routeDataRef.current = null
-
-    // 기존 전체 핀 제거 후 다시 그림
-    allMarkersRef.current.forEach((m) => m.remove())
-    allMarkersRef.current = []
-
-    const pts = []
-    mapPartners.forEach((p) => {
-      if (!(p.lat && p.lng)) return
-      const pos = { lat: Number(p.lat), lng: Number(p.lng) }
-      allMarkersRef.current.push(makePin(map, pos, 'multi', Lz(p, 'name'), catIcon(p.cat)))
-      pts.push([pos.lat, pos.lng])
-    })
-
-    map.invalidateSize()
-    if (pts.length) {
-      map.fitBounds(L.latLngBounds([...pts, [origin.lat, origin.lng]]), { padding: FIT_PADDING, animate: true })
-    } else {
-      map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
-    }
-    setShowAll(true)
-    if (onShowAll) onShowAll() // 단일 선택 해제 → 이후 사이드 목록에서 다시 선택 가능
-  }
-
-  // 전체보기 중 범위(필터)가 바뀌면 핀 다시 표시
-  useEffect(() => {
-    if (!ready || !showAll) return
-    showAllPartners()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapPartners])
-
-  // 전체보기 중 언어 변경 시 핀 라벨만 갱신 (줌 유지)
-  useEffect(() => {
-    if (!ready || !showAll || !mapRef.current) return
-    const map = mapRef.current
-    allMarkersRef.current.forEach((m) => m.remove())
-    allMarkersRef.current = []
-    mapPartners.forEach((p) => {
-      if (!(p.lat && p.lng)) return
-      allMarkersRef.current.push(makePin(map, { lat: Number(p.lat), lng: Number(p.lng) }, 'multi', Lz(p, 'name'), catIcon(p.cat)))
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang])
-
-  const hasMappable = mapPartners.some((p) => p.lat && p.lng)
   const showSelectHint = ready && !partner && !showAll && !errMsg
-  const showPlayHint = ready && !!partner && routeReady && !playing && !readout && !errMsg
+  const showPlayHint = ready && !!partner && !showAll && routeReady && !playing && !readout && !errMsg
 
   return (
     <div className="mapwrap">
@@ -316,7 +327,7 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
         </div>
       )}
 
-      {readout && (
+      {readout && !showAll && (
         <div className="dist-top" key={partner?.id || 'd'}>
           <span className="material-symbols-outlined ic">flag</span>
           <div className="dt-body">
@@ -335,20 +346,15 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
         <button className="map-btn" onClick={goOrigin} disabled={!ready}>
           <span className="material-symbols-outlined">anchor</span>{t('map.toOrigin')}
         </button>
-        <button
-          className={'map-btn' + (showAll ? ' active' : '')}
-          onClick={showAllPartners}
-          disabled={!ready || !hasMappable}
-        >
-          <span className="material-symbols-outlined">pin_drop</span>{t('map.showAll')}
-        </button>
-        <button
-          className={'map-btn primary' + (showPlayHint ? ' pulse' : '')}
-          onClick={playRoute}
-          disabled={!routeReady || playing}
-        >
-          <span className="material-symbols-outlined">navigation</span>{t('map.playRoute')}
-        </button>
+        {!showAll && (
+          <button
+            className={'map-btn primary' + (showPlayHint ? ' pulse' : '')}
+            onClick={playRoute}
+            disabled={!routeReady || playing}
+          >
+            <span className="material-symbols-outlined">navigation</span>{t('map.playRoute')}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -367,17 +373,24 @@ function makePin(map, pos, kind, label, iconOverride) {
     `<div class="tag">${escapeHtml(label)}</div></div>`
   return L.marker([pos.lat, pos.lng], {
     icon: L.divIcon({ html, className: 'pin-divicon', iconSize: [0, 0], iconAnchor: [0, 0] }),
-    interactive: false,
-    keyboard: false,
+    interactive: false, keyboard: false,
   }).addTo(map)
+}
+
+function makeCluster(map, pos, count, onClick) {
+  const html = `<div class="cl-pin"><div class="cl-dot">${count}</div></div>`
+  const m = L.marker([pos.lat, pos.lng], {
+    icon: L.divIcon({ html, className: 'cl-divicon', iconSize: [0, 0], iconAnchor: [0, 0] }),
+    interactive: true, keyboard: false, zIndexOffset: 500,
+  }).addTo(map)
+  m.on('click', onClick)
+  return m
 }
 
 function carIcon() {
   return L.divIcon({
     html: '<div class="car-marker"><div class="disc"><span class="material-symbols-outlined">navigation</span></div></div>',
-    className: 'car-divicon',
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
+    className: 'car-divicon', iconSize: [0, 0], iconAnchor: [0, 0],
   })
 }
 

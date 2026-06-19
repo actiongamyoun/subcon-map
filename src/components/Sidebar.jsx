@@ -1,29 +1,87 @@
+import { useState } from 'react'
 import CatBadge from './CatBadge.jsx'
+import { REGION_ALL } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
+
+// 지역(시/도) + 모두 보기 드롭다운 — 선택 시 지도 모두 보기 진입
+function RegionMenu({ regions, region, showAll, onPick }) {
+  const { t } = useLang()
+  const [open, setOpen] = useState(false)
+  const label = showAll && region !== REGION_ALL ? region : t('region.showAll')
+  const labelOf = (r) => (r === REGION_ALL ? t('region.all') : r)
+  return (
+    <div className="region-menu">
+      <button className={'region-btn' + (showAll ? ' active' : '')} onClick={() => setOpen((v) => !v)}>
+        <span className="material-symbols-outlined">map</span>
+        <span className="rb-label">{label}</span>
+        <span className="material-symbols-outlined rb-caret">expand_more</span>
+      </button>
+      {open && (
+        <>
+          <div className="region-scrim" onClick={() => setOpen(false)} />
+          <div className="region-list">
+            {regions.map((r) => (
+              <button
+                key={r}
+                className={'region-item' + (showAll && region === r ? ' on' : '')}
+                onClick={() => { onPick(r); setOpen(false) }}
+              >
+                <span className="material-symbols-outlined">{r === REGION_ALL ? 'public' : 'location_on'}</span>
+                {labelOf(r)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function Sidebar({
   partners, selectedId, onSelect,
   projectMode, activeProject, checkedIds, onToggleCheck,
-  distances,
+  distances, regions = [REGION_ALL], region = REGION_ALL, onPickRegion, showAll = false,
 }) {
   const { t, L } = useLang()
+  const [copiedId, setCopiedId] = useState(null)
+
+  const sharePartner = (p) => {
+    const name = L(p, 'name')
+    const addr = L(p, 'addr') || ''
+    const link = p.lat && p.lng
+      ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+      : addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : ''
+    const text = [name, addr, link].filter(Boolean).join('\n')
+    if (navigator.share) {
+      navigator.share({ title: name, text }).catch(() => {})
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedId(p.id)
+        setTimeout(() => setCopiedId(null), 1500)
+      }).catch(() => {})
+    }
+  }
+
   return (
     <aside className="sidebar">
       <div className="side-head">
-        <div className="row">
-          <span className="t">{t('side.partners')}</span>
-          {projectMode && activeProject && (
-            <span className="proj-tag">
-              <span className="material-symbols-outlined">check_circle</span>
-              {t('side.selectedN', { n: checkedIds.size })}
-            </span>
-          )}
+        <div className="sh-left">
+          <div className="row">
+            <span className="t">{t('side.partners')}</span>
+            {projectMode && activeProject && (
+              <span className="proj-tag">
+                <span className="material-symbols-outlined">check_circle</span>
+                {t('side.selectedN', { n: checkedIds.size })}
+              </span>
+            )}
+          </div>
+          <div className="c">
+            {projectMode && activeProject
+              ? t('side.projectHint', { name: L(activeProject, 'name') })
+              : t('side.registeredN', { n: partners.length })}
+          </div>
         </div>
-        <div className="c">
-          {projectMode && activeProject
-            ? t('side.projectHint', { name: L(activeProject, 'name') })
-            : t('side.registeredN', { n: partners.length })}
-        </div>
+        <RegionMenu regions={regions} region={region} showAll={showAll} onPick={onPickRegion} />
       </div>
 
       <div className="cards">
@@ -56,8 +114,15 @@ export default function Sidebar({
                 )}
                 <div className="body">
                   <div className="name">
-                    {L(p, 'name')}
+                    <span className="nm-text">{L(p, 'name')}</span>
                     <CatBadge cat={p.cat} />
+                    <button
+                      className="share-btn"
+                      onClick={(e) => { e.stopPropagation(); sharePartner(p) }}
+                      title={t('share.title')}
+                    >
+                      <span className="material-symbols-outlined">{copiedId === p.id ? 'check' : 'ios_share'}</span>
+                    </button>
                   </div>
                   {L(p, 'desc') && <div className="desc">{L(p, 'desc')}</div>}
                   <div className={'meta' + (dist ? '' : ' dim')}>
