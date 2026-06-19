@@ -1,8 +1,9 @@
 import { STATUS_ORDER } from '../lib/constants.js'
 import { EN_MONTHS } from '../lib/i18n.js'
 import { useLang } from '../lib/lang.jsx'
+import CatBadge from './CatBadge.jsx'
 
-// 간트 표시 범위: 선택 협력사의 아이템 전체를 감싸되, 월 경계로 스냅. 최소 5개월.
+// 간트 표시 범위: 아이템 전체를 감싸되, 월 경계로 스냅. 최소 5개월.
 function computeRange(items) {
   const today = new Date()
   let min = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -30,9 +31,22 @@ function monthList(start, end) {
   return out
 }
 
-export default function Gantt({ partner }) {
-  const { t, L, tc, ts, lang } = useLang()
-  const items = partner?.items || []
+export default function Gantt({ partner, activeProject = null, projects = [] }) {
+  const { t, L, ts, lang } = useLang()
+  const allItems = partner?.items || []
+
+  // 활성 호선으로 필터: 해당 호선 아이템 + 공통(prj 없음). 전체(호선 미선택)면 모두.
+  const items = activeProject
+    ? allItems.filter((it) => it.prj === activeProject.id || !it.prj)
+    : allItems
+
+  const projName = (prj) => {
+    if (!prj) return t('item.common')
+    const p = projects.find((x) => x.id === prj)
+    return p ? L(p, 'name') : t('item.common')
+  }
+
+  const hasAny = partner && allItems.length > 0
   const hasItems = partner && items.length > 0
   const { start, end } = computeRange(items)
   const span = end - start || 1
@@ -50,7 +64,9 @@ export default function Gantt({ partner }) {
       <div className="gantt-head">
         <div className="left">
           <span className="t"><span className="material-symbols-outlined">calendar_month</span>{t('gantt.title')}</span>
-          <span className="who">{partner ? `${L(partner, 'name')} · ${tc(partner.cat)}` : t('gantt.noPartner')}</span>
+          <span className="who">
+            {partner ? <>{L(partner, 'name')} <CatBadge cat={partner.cat} /></> : t('gantt.noPartner')}
+          </span>
         </div>
         <div className="legend">
           {STATUS_ORDER.map((k) => (
@@ -68,7 +84,7 @@ export default function Gantt({ partner }) {
         ) : !hasItems ? (
           <div className="empty">
             <span className="material-symbols-outlined">event_busy</span>
-            {t('gantt.noItems')}
+            {hasAny && activeProject ? t('gantt.noItemsProject') : t('gantt.noItems')}
           </div>
         ) : (
           <div className="gchart">
@@ -89,7 +105,10 @@ export default function Gantt({ partner }) {
                 const w = Math.max(1.5, pct(it.end) - l)
                 return (
                   <div className="grow" key={it.id || it.name}>
-                    <div className="glabel" title={it.name}>{it.name}</div>
+                    <div className="glabel">
+                      <div className="gl-name" title={it.name}>{it.name}</div>
+                      <div className="gl-prj" title={projName(it.prj)}>{projName(it.prj)}</div>
+                    </div>
                     <div className="gtrack">
                       <div className={'gbar b-' + (it.status || 'plan')} style={{ left: l + '%', width: w + '%' }}>
                         <span>{it.name}</span>

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import Modal from './Modal.jsx'
-import { CATEGORIES } from '../lib/constants.js'
+import CatBadge from './CatBadge.jsx'
 import { useLang } from '../lib/lang.jsx'
 
 const blankDraft = () => ({ id: null, name: '', name_en: '', note: '', partnerIds: [] })
 
 export default function ProjectModal({ projects, partners, onClose, onSave, onDelete }) {
-  const { t, L, tc } = useLang()
+  const { t, L } = useLang()
   const [mode, setMode] = useState('list')
   const [draft, setDraft] = useState(blankDraft())
 
@@ -90,7 +90,7 @@ export default function ProjectModal({ projects, partners, onClose, onSave, onDe
           <div key={p.id} className={'checkrow' + (on ? ' on' : '')} onClick={() => toggle(p.id)}>
             <div className="cbox"><span className="material-symbols-outlined">check</span></div>
             <div className="pg">
-              <div className="pn">{L(p, 'name')} <span className={'badge ' + CATEGORIES[p.cat]?.cls} style={{ marginLeft: 4 }}>{tc(p.cat)}</span></div>
+              <div className="pn">{L(p, 'name')} <CatBadge cat={p.cat} style={{ marginLeft: 4 }} /></div>
               <div className="pd">{L(p, 'addr') || t('common.noAddress')}</div>
             </div>
           </div>

@@ -56,6 +56,7 @@ export const STRINGS = {
     'gantt.noPartner': '협력사 미선택',
     'gantt.selectHint': '협력사를 선택하면 진행 아이템과 착수·종료 예상 일정이 표시됩니다.',
     'gantt.noItems': "등록된 아이템이 없습니다. 상단 ‘협력사 관리’에서 추가할 수 있어요.",
+    'gantt.noItemsProject': '이 프로젝트에 해당하는 아이템이 없습니다.',
     'gantt.today': '오늘',
 
     'common.cancel': '취소',
@@ -102,6 +103,8 @@ export const STRINGS = {
     'pM.itemStart': '착수일',
     'pM.itemEnd': '종료 예상일',
     'pM.itemStatus': '상태',
+    'pM.itemProject': '프로젝트',
+    'item.common': '공통',
     'pM.addItem': '아이템 추가',
     'pM.confirmDelete': "‘{name}’ 협력사를 삭제할까요? 등록된 아이템도 함께 삭제됩니다.",
 
@@ -195,6 +198,7 @@ export const STRINGS = {
     'gantt.noPartner': 'No partner selected',
     'gantt.selectHint': 'Select a partner to see work items and start/finish dates.',
     'gantt.noItems': "No items yet. Add them via ‘Partners’ above.",
+    'gantt.noItemsProject': 'No items for this project.',
     'gantt.today': 'Today',
 
     'common.cancel': 'Cancel',
@@ -241,6 +245,8 @@ export const STRINGS = {
     'pM.itemStart': 'Start',
     'pM.itemEnd': 'Est. finish',
     'pM.itemStatus': 'Status',
+    'pM.itemProject': 'Project',
+    'item.common': 'Common',
     'pM.addItem': 'Add item',
     'pM.confirmDelete': "Delete partner ‘{name}’? Its work items will also be deleted.",
 
@@ -282,11 +288,12 @@ export const STRINGS = {
 
 // 업종/공정 분류 라벨 (한/영)
 export const CAT_I18N = {
-  paint: { ko: '도장/방식', en: 'Painting/Coating' },
-  surf: { ko: '표면처리', en: 'Surface Prep' },
-  mech: { ko: '기계가공', en: 'Machining' },
-  elec: { ko: '전장/배선', en: 'Electrical' },
-  weld: { ko: '용접/구조', en: 'Welding/Structure' },
+  pipe: { ko: '파이프', en: 'Pipe' },
+  block: { ko: '선박블록', en: 'Ship Block' },
+  accom: { ko: '거주구', en: 'Accommodation' },
+  outfit: { ko: '철의장품', en: 'Steel Outfitting' },
+  hatch: { ko: 'Hatch Cover', en: 'Hatch Cover' },
+  lashing: { ko: 'Lashing Bridge', en: 'Lashing Bridge' },
   etc: { ko: '기타', en: 'Other' },
 }
 

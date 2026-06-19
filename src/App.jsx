@@ -177,7 +177,7 @@ function AppInner() {
           />
           <div className="content">
             <MapView yard={yard} partner={selectedPartner} onRouted={onRouted} />
-            <Gantt partner={selectedPartner} />
+            <Gantt partner={selectedPartner} activeProject={activeProject} projects={projects} />
           </div>
         </div>
       </div>
@@ -186,6 +186,8 @@ function AppInner() {
       {partnersOpen && (
         <PartnerModal
           partners={partners}
+          projects={projects}
+          activeProjectId={activeProjectId}
           onClose={() => setPartnersOpen(false)}
           onSave={handleSavePartner}
           onDelete={handleDeletePartner}

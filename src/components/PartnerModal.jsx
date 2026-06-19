@@ -2,13 +2,14 @@ import { useState } from 'react'
 import Modal from './Modal.jsx'
 import LocationSearch from './LocationSearch.jsx'
 import MapPicker from './MapPicker.jsx'
-import { CATEGORY_ORDER, CATEGORIES, STATUS_ORDER } from '../lib/constants.js'
+import CatBadge from './CatBadge.jsx'
+import { CATEGORY_ORDER, STATUS_ORDER } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
 const tmpId = (p) => p + '_' + Math.random().toString(36).slice(2, 8)
-const blankDraft = () => ({ id: null, name: '', name_en: '', cat: 'paint', addr: '', addr_en: '', desc: '', desc_en: '', lat: '', lng: '', items: [] })
+const blankDraft = () => ({ id: null, name: '', name_en: '', cat: 'pipe', addr: '', addr_en: '', desc: '', desc_en: '', lat: '', lng: '', items: [] })
 
-export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
+export default function PartnerModal({ partners, projects = [], activeProjectId = null, onClose, onSave, onDelete }) {
   const { t, L, tc, ts } = useLang()
   const [mode, setMode] = useState('list') // list | edit
   const [draft, setDraft] = useState(blankDraft())
@@ -18,7 +19,8 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
     setDraft({
       ...p,
       name_en: p.name_en || '', addr_en: p.addr_en || '', desc_en: p.desc_en || '',
-      lat: p.lat ?? '', lng: p.lng ?? '', items: (p.items || []).map((it) => ({ ...it })),
+      lat: p.lat ?? '', lng: p.lng ?? '',
+      items: (p.items || []).map((it) => ({ ...it, prj: it.prj || '' })),
     })
     setMode('edit')
   }
@@ -28,7 +30,7 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
   const setItem = (i, k, v) => setDraft((d) => {
     const items = d.items.slice(); items[i] = { ...items[i], [k]: v }; return { ...d, items }
   })
-  const addItem = () => setDraft((d) => ({ ...d, items: [...d.items, { id: tmpId('i'), name: '', start: '', end: '', status: 'plan' }] }))
+  const addItem = () => setDraft((d) => ({ ...d, items: [...d.items, { id: tmpId('i'), name: '', prj: activeProjectId || '', start: '', end: '', status: 'plan' }] }))
   const delItem = (i) => setDraft((d) => ({ ...d, items: d.items.filter((_, x) => x !== i) }))
 
   const save = () => {
@@ -41,7 +43,7 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
       lng: draft.lng === '' ? null : Number(draft.lng),
       items: draft.items
         .filter((it) => it.name.trim())
-        .map((it) => ({ id: it.id || tmpId('i'), name: it.name.trim(), start: it.start, end: it.end, status: it.status || 'plan' })),
+        .map((it) => ({ id: it.id || tmpId('i'), name: it.name.trim(), prj: it.prj || '', start: it.start, end: it.end, status: it.status || 'plan' })),
     }
     onSave(clean)
     setMode('list')
@@ -68,7 +70,7 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
           {partners.map((p) => (
             <div className="pitem" key={p.id}>
               <div className="pg">
-                <div className="pn">{L(p, 'name')} <span className={'badge ' + CATEGORIES[p.cat]?.cls} style={{ marginLeft: 4 }}>{tc(p.cat)}</span></div>
+                <div className="pn">{L(p, 'name')} <CatBadge cat={p.cat} style={{ marginLeft: 4 }} /></div>
                 <div className="pd">{L(p, 'addr') || t('common.noAddress')} · {t('pM.itemsN', { n: (p.items || []).length })}</div>
               </div>
               <button className="linkbtn" onClick={() => startEdit(p)}><span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>{t('common.edit')}</button>
@@ -101,11 +103,11 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
       <div className="row2">
         <div className="field">
           <label>{t('pM.name')}</label>
-          <input className="in" value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="대한코팅" />
+          <input className="in" value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="대성배관" />
         </div>
         <div className="field">
           <label>{t('pM.nameEn')}</label>
-          <input className="in" value={draft.name_en} onChange={(e) => set('name_en', e.target.value)} placeholder="Daehan Coating" />
+          <input className="in" value={draft.name_en} onChange={(e) => set('name_en', e.target.value)} placeholder="Daesung Piping" />
         </div>
       </div>
 
@@ -144,11 +146,11 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
       <div className="row2">
         <div className="field">
           <label>{t('pM.desc')}</label>
-          <input className="in" value={draft.desc} onChange={(e) => set('desc', e.target.value)} placeholder="선체 외판 방식 도장 전문" />
+          <input className="in" value={draft.desc} onChange={(e) => set('desc', e.target.value)} placeholder="블록 배관 설치 전문" />
         </div>
         <div className="field">
           <label>{t('pM.descEn')}</label>
-          <input className="in" value={draft.desc_en} onChange={(e) => set('desc_en', e.target.value)} placeholder="Hull plate coating" />
+          <input className="in" value={draft.desc_en} onChange={(e) => set('desc_en', e.target.value)} placeholder="Block piping install" />
         </div>
       </div>
 
@@ -156,13 +158,17 @@ export default function PartnerModal({ partners, onClose, onSave, onDelete }) {
 
       <div className="sec-t"><span>{t('pM.items')}</span></div>
       {draft.items.length > 0 && (
-        <div className="itemhead">
-          <div>{t('pM.itemName')}</div><div>{t('pM.itemStart')}</div><div>{t('pM.itemEnd')}</div><div>{t('pM.itemStatus')}</div><div></div>
+        <div className="itemhead itemhead-prj">
+          <div>{t('pM.itemName')}</div><div>{t('pM.itemProject')}</div><div>{t('pM.itemStart')}</div><div>{t('pM.itemEnd')}</div><div>{t('pM.itemStatus')}</div><div></div>
         </div>
       )}
       {draft.items.map((it, i) => (
-        <div className="itemrow" key={it.id || i}>
-          <input className="in" value={it.name} onChange={(e) => setItem(i, 'name', e.target.value)} placeholder="1번 도크 외판 도장" />
+        <div className="itemrow itemrow-prj" key={it.id || i}>
+          <input className="in" value={it.name} onChange={(e) => setItem(i, 'name', e.target.value)} placeholder="1번 블록 배관 설치" />
+          <select className="sel" value={it.prj || ''} onChange={(e) => setItem(i, 'prj', e.target.value)}>
+            <option value="">{t('item.common')}</option>
+            {projects.map((pr) => <option key={pr.id} value={pr.id}>{L(pr, 'name')}</option>)}
+          </select>
           <input className="in" type="date" value={it.start || ''} onChange={(e) => setItem(i, 'start', e.target.value)} />
           <input className="in" type="date" value={it.end || ''} onChange={(e) => setItem(i, 'end', e.target.value)} />
           <select className="sel" value={it.status || 'plan'} onChange={(e) => setItem(i, 'status', e.target.value)}>

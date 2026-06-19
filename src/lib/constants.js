@@ -1,19 +1,20 @@
-// 업종/공정 분류
+// 업종/공정 분류 (라벨은 i18n에서, 여기선 색상 클래스 + 아이콘)
 export const CATEGORIES = {
-  paint: { label: '도장/방식', cls: 'cat-paint' },
-  surf:  { label: '표면처리', cls: 'cat-surf' },
-  mech:  { label: '기계가공', cls: 'cat-mech' },
-  elec:  { label: '전장/배선', cls: 'cat-elec' },
-  weld:  { label: '용접/구조', cls: 'cat-weld' },
-  etc:   { label: '기타', cls: 'cat-etc' },
+  pipe:    { label: '파이프',         cls: 'cat-pipe',    icon: 'plumbing' },
+  block:   { label: '선박블록',       cls: 'cat-block',   icon: 'deployed_code' },
+  accom:   { label: '거주구',         cls: 'cat-accom',   icon: 'apartment' },
+  outfit:  { label: '철의장품',       cls: 'cat-outfit',  icon: 'construction' },
+  hatch:   { label: 'Hatch Cover',    cls: 'cat-hatch',   icon: 'garage' },
+  lashing: { label: 'Lashing Bridge', cls: 'cat-lashing', icon: 'link' },
+  etc:     { label: '기타',           cls: 'cat-etc',     icon: 'category' },
 }
-export const CATEGORY_ORDER = ['paint', 'surf', 'mech', 'elec', 'weld', 'etc']
+export const CATEGORY_ORDER = ['pipe', 'block', 'accom', 'outfit', 'hatch', 'lashing', 'etc']
 
-export function catLabel(key) {
-  return (CATEGORIES[key] || CATEGORIES.etc).label
-}
 export function catClass(key) {
   return (CATEGORIES[key] || CATEGORIES.etc).cls
+}
+export function catIcon(key) {
+  return (CATEGORIES[key] || CATEGORIES.etc).icon
 }
 
 // 아이템 진행 상태

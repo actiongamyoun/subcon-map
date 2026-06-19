@@ -1,4 +1,4 @@
-import { catClass } from '../lib/constants.js'
+import CatBadge from './CatBadge.jsx'
 import { useLang } from '../lib/lang.jsx'
 
 export default function Sidebar({
@@ -6,7 +6,7 @@ export default function Sidebar({
   projectMode, activeProject, checkedIds, onToggleCheck,
   distances,
 }) {
-  const { t, L, tc } = useLang()
+  const { t, L } = useLang()
   return (
     <aside className="sidebar">
       <div className="side-head">
@@ -57,7 +57,7 @@ export default function Sidebar({
                 <div className="body">
                   <div className="name">
                     {L(p, 'name')}
-                    <span className={'badge ' + catClass(p.cat)}>{tc(p.cat)}</span>
+                    <CatBadge cat={p.cat} />
                   </div>
                   {L(p, 'desc') && <div className="desc">{L(p, 'desc')}</div>}
                   <div className={'meta' + (dist ? '' : ' dim')}>
