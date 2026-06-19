@@ -37,6 +37,9 @@ export const STRINGS = {
     'map.eta': '예상 소요',
     'map.simRoute': '시뮬레이션 경로 (길찾기 키 미설정)',
     'map.replay': '경로 다시 보기',
+    'map.toOrigin': '출발지',
+    'map.playRoute': '경로 보기',
+    'map.pressPlay': "‘경로 보기’를 눌러 이동을 확인하세요",
     'map.finalDistance': '최종 이동 거리',
     'unit.min': '분',
 
@@ -173,6 +176,9 @@ export const STRINGS = {
     'map.eta': 'ETA',
     'map.simRoute': 'Simulated route (no routing key)',
     'map.replay': 'Replay route',
+    'map.toOrigin': 'Shipyard',
+    'map.playRoute': 'Show route',
+    'map.pressPlay': "Press ‘Show route’ to see the trip",
     'map.finalDistance': 'Total distance',
     'unit.min': ' min',
 

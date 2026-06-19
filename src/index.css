@@ -288,6 +288,27 @@ button { font-family: inherit; }
 .map-btn:hover { background: #fff; }
 .map-btn:disabled { opacity: .45; cursor: default; }
 .map-btn .material-symbols-outlined { font-size: 17px; color: var(--brand-deep); }
+.map-btn.primary { background: var(--route); border-color: var(--route); color: #fff; }
+.map-btn.primary .material-symbols-outlined { color: #fff; }
+.map-btn.primary:hover { background: var(--route-deep); }
+.map-btn.primary:disabled { background: rgba(255,255,255,.94); border-color: rgba(12,36,64,.12); color: var(--ink-soft); }
+.map-btn.primary:disabled .material-symbols-outlined { color: var(--brand-deep); }
+.map-btn.pulse { animation: mbPulse 1.5s ease-in-out infinite; }
+@keyframes mbPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,106,61,.55); }
+  50% { box-shadow: 0 0 0 7px rgba(255,106,61,0); }
+}
+
+/* '경로 보기' 안내문 (버튼 위) */
+.play-hint {
+  position: absolute; left: 14px; bottom: 56px; z-index: 5;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(12,36,64,.9); color: #fff; font-size: 12px; font-weight: 600;
+  padding: 7px 12px; border-radius: 999px; box-shadow: var(--shadow);
+  animation: phIn .3s ease both;
+}
+.play-hint .material-symbols-outlined { font-size: 16px; color: #ffb79e; }
+@keyframes phIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 .map-legend {
   position: absolute; right: 14px; bottom: 14px; z-index: 5; display: flex; gap: 14px;

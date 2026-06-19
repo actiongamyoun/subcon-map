@@ -7,9 +7,9 @@ import { pathMetrics, pointAt } from '../lib/geo.js'
 import { DEFAULT_YARD } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
-const TRAVEL_MS = 3400
-const FOLLOW_ZOOM = 13
-const DEST_ZOOM = 16 // 도착 시 목적지 클로즈업 줌 레벨
+const ORIGIN_ZOOM = 14   // 조선소(출발지) 보여줄 때 줌
+const DEST_ZOOM = 16     // 도착 시 목적지 클로즈업 줌
+const FIT_PADDING = [70, 70]
 
 function compassBearing(a, b) {
   const toRad = (d) => (d * Math.PI) / 180
@@ -32,9 +32,11 @@ export default function MapView({ yard, partner, onRouted }) {
   const rafRef = useRef(null)
   const countRafRef = useRef(null)
   const runIdRef = useRef(0)
+  const routeDataRef = useRef(null)
 
   const [ready, setReady] = useState(false)
-  const [hintGone, setHintGone] = useState(false)
+  const [routeReady, setRouteReady] = useState(false)
+  const [playing, setPlaying] = useState(false)
   const [readout, setReadout] = useState(null)
   const [displayKm, setDisplayKm] = useState(0)
   const [errMsg, setErrMsg] = useState('')
@@ -42,10 +44,10 @@ export default function MapView({ yard, partner, onRouted }) {
   const origin = resolveOrigin(yard)
   const yardLabel = Lz(yard, 'name') || t('yard.fallback')
 
-  // 지도 초기화 (OpenStreetMap)
+  // 지도 초기화 (OpenStreetMap) — 조선소를 적절히 확대해 표시
   useEffect(() => {
     const map = L.map(boxRef.current, { zoomControl: true, attributionControl: true })
-      .setView([origin.lat, origin.lng], 12)
+      .setView([origin.lat, origin.lng], ORIGIN_ZOOM)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap',
@@ -73,7 +75,7 @@ export default function MapView({ yard, partner, onRouted }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yardLabel, origin.lat, origin.lng, ready])
 
-  // 언어 변경 시 목적지 핀 라벨 갱신 (재애니메이션 없이)
+  // 언어 변경 시 목적지 핀 라벨 갱신
   useEffect(() => {
     if (!ready || !partner || !destMarkerRef.current || !mapRef.current) return
     const pos = destMarkerRef.current.getLatLng()
@@ -82,14 +84,14 @@ export default function MapView({ yard, partner, onRouted }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang])
 
-  // 협력사 선택 → 경로
+  // 협력사 선택 → 경로 "준비"(대략적 위치 표시), 자동 이동은 안 함
   useEffect(() => {
     if (!ready || !partner) return
-    runRoute(partner)
+    prepareRoute(partner)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partner?.id, ready])
 
-  // 거리 카운트업 애니메이션 (0 → 최종 거리)
+  // 거리 카운트업 애니메이션
   useEffect(() => {
     cancelAnimationFrame(countRafRef.current)
     if (!readout) { setDisplayKm(0); return }
@@ -99,8 +101,7 @@ export default function MapView({ yard, partner, onRouted }) {
     const step = (ts) => {
       if (!t0) t0 = ts
       const p = Math.min(1, (ts - t0) / dur)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setDisplayKm(target * eased)
+      setDisplayKm(target * (1 - Math.pow(1 - p, 3)))
       if (p < 1) countRafRef.current = requestAnimationFrame(step)
       else setDisplayKm(target)
     }
@@ -108,21 +109,20 @@ export default function MapView({ yard, partner, onRouted }) {
     return () => cancelAnimationFrame(countRafRef.current)
   }, [readout])
 
-  async function runRoute(p) {
+  // 1) 협력사 선택 → 목적지 핀 + 경로(흐리게) 그리고 출발+도착이 다 보이게 축소
+  async function prepareRoute(p) {
     const map = mapRef.current
     if (!map) return
     const runId = ++runIdRef.current
     cancelAnimationFrame(rafRef.current)
     setErrMsg('')
     setReadout(null)
-    setHintGone(true)
+    setPlaying(false)
+    setRouteReady(false)
 
     let dest = p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : await geocode(p.addr)
     if (runId !== runIdRef.current) return
-    if (!dest) {
-      setErrMsg(t('map.notFoundBody', { name: Lz(p, 'name') }))
-      return
-    }
+    if (!dest) { setErrMsg(t('map.notFoundBody', { name: Lz(p, 'name') })); return }
 
     if (destMarkerRef.current) destMarkerRef.current.remove()
     destMarkerRef.current = makePin(map, dest, 'dest', Lz(p, 'name'))
@@ -131,26 +131,46 @@ export default function MapView({ yard, partner, onRouted }) {
     if (runId !== runIdRef.current) return
     const path = dir.path && dir.path.length > 1 ? dir.path : [[origin.lat, origin.lng], [dest.lat, dest.lng]]
     const latlngs = path.map(([la, ln]) => [la, ln])
-
-    if (faintRef.current) faintRef.current.remove()
-    if (liveRef.current) liveRef.current.remove()
-    faintRef.current = L.polyline(latlngs, { color: '#FF6A3D', weight: 5, opacity: 0.25 }).addTo(map)
-    liveRef.current = L.polyline([latlngs[0]], { color: '#FF6A3D', weight: 5, opacity: 0.95 }).addTo(map)
-
-    if (!carRef.current) {
-      carRef.current = L.marker(latlngs[0], { icon: carIcon(), zIndexOffset: 1000, interactive: false }).addTo(map)
-    } else {
-      carRef.current.setLatLng(latlngs[0])
-      carRef.current.addTo(map)
-    }
-
     const metrics = pathMetrics(path)
-    map.setView(latlngs[0], FOLLOW_ZOOM, { animate: false })
-
-    let t0 = null
     const km = (dir.distance / 1000).toFixed(1)
     const etaMin = Math.max(1, Math.round(dir.duration / 60))
 
+    if (faintRef.current) faintRef.current.remove()
+    if (liveRef.current) liveRef.current.remove()
+    faintRef.current = L.polyline(latlngs, { color: '#FF6A3D', weight: 5, opacity: 0.3, dashArray: '3 9' }).addTo(map)
+    liveRef.current = L.polyline([latlngs[0]], { color: '#FF6A3D', weight: 5, opacity: 0.95 }).addTo(map)
+
+    if (!carRef.current) carRef.current = L.marker(latlngs[0], { icon: carIcon(), zIndexOffset: 1000, interactive: false }).addTo(map)
+    else { carRef.current.setLatLng(latlngs[0]); carRef.current.addTo(map) }
+
+    const bounds = L.latLngBounds(latlngs)
+    map.invalidateSize()
+    map.fitBounds(bounds, { padding: FIT_PADDING, animate: true })
+
+    routeDataRef.current = { dest, path, latlngs, metrics, km, etaMin, sim: !dir.real, bounds }
+    setRouteReady(true)
+    if (onRouted) onRouted(p.id, { km, sim: !dir.real })
+  }
+
+  // 2) 경로 보기 → 차량이 경로를 따라 이동(카메라 고정 = 어지럼 방지) → 3) 도착 시 목적지 확대
+  function playRoute() {
+    const map = mapRef.current
+    const rd = routeDataRef.current
+    if (!map || !rd) return
+    const runId = ++runIdRef.current
+    cancelAnimationFrame(rafRef.current)
+    setReadout(null)
+    setPlaying(true)
+
+    const { dest, path, latlngs, metrics, km, etaMin, sim, bounds } = rd
+    // 전체 경로가 보이는 축소 상태로 고정 (따라가지 않음)
+    map.fitBounds(bounds, { padding: FIT_PADDING, animate: false })
+    carRef.current.setLatLng(latlngs[0])
+    liveRef.current.setLatLngs([latlngs[0]])
+
+    // 거리에 비례한 편안한 속도 (3.5~7초)
+    const TRAVEL_MS = Math.min(7000, Math.max(3500, parseFloat(km) * 280))
+    let t0 = null
     function frame(ts) {
       if (runId !== runIdRef.current) return
       if (!t0) t0 = ts
@@ -158,44 +178,44 @@ export default function MapView({ yard, partner, onRouted }) {
       const at = pointAt(path, metrics, tt)
       const pos = [at.lat, at.lng]
 
-      const sub = latlngs.slice(0, at.idx)
-      sub.push(pos)
+      const sub = latlngs.slice(0, at.idx); sub.push(pos)
       liveRef.current.setLatLngs(sub)
-
       carRef.current.setLatLng(pos)
       const el = carRef.current.getElement()
       if (el) {
         const inner = el.querySelector('.car-marker')
         if (inner) inner.style.transform = `rotate(${compassBearing(at.from, at.to)}deg)`
       }
-
-      if (Number.isFinite(pos[0]) && Number.isFinite(pos[1])) {
-        map.setView(pos, FOLLOW_ZOOM, { animate: false })
-      }
+      // 카메라 고정 — 축소 상태 유지
 
       if (tt < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
         liveRef.current.setLatLngs(latlngs)
-        // 도착 연출: 목적지로 확실히 줌인 (flyTo는 보간 중 줌이 어긋날 수 있어 setView 사용)
-        map.invalidateSize()
+        // 도착: 목적지로 확대
         map.setView([Number(dest.lat), Number(dest.lng)], DEST_ZOOM, { animate: true })
-        setReadout({ km, etaMin, sim: !dir.real })
-        if (onRouted) onRouted(p.id, { km, sim: !dir.real })
+        setPlaying(false)
+        setReadout({ km, etaMin, sim })
       }
     }
     rafRef.current = requestAnimationFrame(frame)
   }
 
-  function replay() {
-    if (partner) runRoute(partner)
+  // 출발지(조선소)로 이동 + 적절히 확대
+  function goOrigin() {
+    const map = mapRef.current
+    if (!map) return
+    map.setView([origin.lat, origin.lng], ORIGIN_ZOOM, { animate: true })
   }
+
+  const showSelectHint = ready && !partner && !errMsg
+  const showPlayHint = ready && !!partner && routeReady && !playing && !readout && !errMsg
 
   return (
     <div className="mapwrap">
       <div className="kmap" ref={boxRef} />
 
-      {ready && !hintGone && !errMsg && (
+      {showSelectHint && (
         <div className="map-overlay-hint">
           <div className="card-hint">
             <span className="material-symbols-outlined">touch_app</span>
@@ -215,6 +235,12 @@ export default function MapView({ yard, partner, onRouted }) {
         </div>
       )}
 
+      {showPlayHint && (
+        <div className="play-hint">
+          <span className="material-symbols-outlined">arrow_downward</span>{t('map.pressPlay')}
+        </div>
+      )}
+
       {readout && (
         <div className="dist-top" key={partner?.id || 'd'}>
           <span className="material-symbols-outlined ic">flag</span>
@@ -231,8 +257,15 @@ export default function MapView({ yard, partner, onRouted }) {
       )}
 
       <div className="map-tools">
-        <button className="map-btn" onClick={replay} disabled={!partner || !ready}>
-          <span className="material-symbols-outlined">replay</span>{t('map.replay')}
+        <button className="map-btn" onClick={goOrigin} disabled={!ready}>
+          <span className="material-symbols-outlined">anchor</span>{t('map.toOrigin')}
+        </button>
+        <button
+          className={'map-btn primary' + (showPlayHint ? ' pulse' : '')}
+          onClick={playRoute}
+          disabled={!routeReady || playing}
+        >
+          <span className="material-symbols-outlined">navigation</span>{t('map.playRoute')}
         </button>
       </div>
     </div>
