@@ -46,6 +46,14 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
   const origin = resolveOrigin(yard)
   const yardLabel = Lz(yard, 'name') || t('yard.fallback')
 
+  // 소요시간 포맷: 60분 이상이면 시간 단위로 (예: 241분 → 4시간 1분)
+  const fmtDuration = (min) => {
+    const h = Math.floor(min / 60), m = min % 60
+    if (h === 0) return lang === 'en' ? `${m} min` : `${m}분`
+    if (m === 0) return lang === 'en' ? `${h} hr` : `${h}시간`
+    return lang === 'en' ? `${h} hr ${m} min` : `${h}시간 ${m}분`
+  }
+
   // 지도 초기화 (OpenStreetMap) — 조선소를 적절히 확대해 표시
   useEffect(() => {
     const map = L.map(boxRef.current, { zoomControl: true, attributionControl: true })
@@ -317,7 +325,7 @@ export default function MapView({ yard, partner, mapPartners = [], onRouted, onS
           </div>
           <div className="dt-eta">
             <span className="material-symbols-outlined">local_shipping</span>
-            {t('map.eta')} {readout.etaMin}{t('unit.min')}
+            {t('map.eta')} {fmtDuration(readout.etaMin)}
           </div>
           {readout.sim && <div className="badge-sim">{t('map.simRoute')}</div>}
         </div>
