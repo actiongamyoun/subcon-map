@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import YardModal from './YardModal.jsx'
 import PartnerModal from './PartnerModal.jsx'
-import ProjectModal from './ProjectModal.jsx'
+import ProjectMatrix from './ProjectMatrix.jsx'
 import { useLang } from '../lib/lang.jsx'
 
 const TABS = [
@@ -58,13 +58,11 @@ export default function AdminScreen({
           />
         )}
         {tab === 'projects' && (
-          <ProjectModal
-            embedded
+          <ProjectMatrix
             projects={projects}
             partners={partners}
-            onClose={noop}
-            onSave={onSaveProject}
-            onDelete={onDeleteProject}
+            onSaveProject={onSaveProject}
+            onDeleteProject={onDeleteProject}
           />
         )}
         {tab === 'yard' && (
