@@ -4,7 +4,7 @@ import LocationSearch from './LocationSearch.jsx'
 import MapPicker from './MapPicker.jsx'
 import { useLang } from '../lib/lang.jsx'
 
-export default function YardModal({ yard, onClose, onSave }) {
+export default function YardModal({ yard, onClose, onSave, embedded }) {
   const { t } = useLang()
   const [f, setF] = useState({
     name: yard?.name || '',
@@ -32,6 +32,7 @@ export default function YardModal({ yard, onClose, onSave }) {
 
   return (
     <Modal
+      embedded={embedded}
       icon="settings"
       title={t('yardM.title')}
       subtitle={t('yardM.subtitle')}

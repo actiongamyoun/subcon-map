@@ -5,7 +5,7 @@ import { useLang } from '../lib/lang.jsx'
 
 const blankDraft = () => ({ id: null, name: '', name_en: '', note: '', partnerIds: [] })
 
-export default function ProjectModal({ projects, partners, onClose, onSave, onDelete }) {
+export default function ProjectModal({ projects, partners, onClose, onSave, onDelete, embedded }) {
   const { t, L } = useLang()
   const [mode, setMode] = useState('list')
   const [draft, setDraft] = useState(blankDraft())
@@ -24,6 +24,7 @@ export default function ProjectModal({ projects, partners, onClose, onSave, onDe
   if (mode === 'list') {
     return (
       <Modal
+        embedded={embedded}
         icon="folder_open" title={t('prM.manageTitle')} subtitle={t('prM.manageSubtitle')}
         onClose={onClose}
         footer={<div className="right"><button className="btn btn-lg" onClick={onClose}>{t('common.close')}</button></div>}
@@ -51,6 +52,7 @@ export default function ProjectModal({ projects, partners, onClose, onSave, onDe
 
   return (
     <Modal
+      embedded={embedded}
       icon={draft.id ? 'edit' : 'create_new_folder'}
       title={draft.id ? t('prM.editTitle') : t('prM.addTitle')}
       subtitle={t('prM.editSubtitle')}

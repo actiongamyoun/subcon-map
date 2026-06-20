@@ -38,10 +38,9 @@ function RegionMenu({ regions, region, showAll, onPick }) {
 }
 
 export default function Sidebar({
-  partners, selectedId, onSelect,
-  projectMode, activeProject, checkedIds, onToggleCheck,
-  distances, regions = [REGION_ALL], region = REGION_ALL, onPickRegion, showAll = false,
-  onDetail,
+  partners, selectedId, onSelect, distances,
+  regions = [REGION_ALL], region = REGION_ALL, onPickRegion, showAll = false,
+  onDetail, activeProject,
 }) {
   const { t, L } = useLang()
   const [copiedId, setCopiedId] = useState(null)
@@ -63,24 +62,18 @@ export default function Sidebar({
     }
   }
 
+  const subtitle = activeProject
+    ? t('side.projectCount', { name: L(activeProject, 'name'), n: partners.length })
+    : t('side.registeredN', { n: partners.length })
+
   return (
     <aside className="sidebar">
       <div className="side-head">
         <div className="sh-left">
           <div className="row">
             <span className="t">{t('side.partners')}</span>
-            {projectMode && activeProject && (
-              <span className="proj-tag">
-                <span className="material-symbols-outlined">check_circle</span>
-                {t('side.selectedN', { n: checkedIds.size })}
-              </span>
-            )}
           </div>
-          <div className="c">
-            {projectMode && activeProject
-              ? t('side.projectHint', { name: L(activeProject, 'name') })
-              : t('side.registeredN', { n: partners.length })}
-          </div>
+          <div className="c">{subtitle}</div>
         </div>
         <RegionMenu regions={regions} region={region} showAll={showAll} onPick={onPickRegion} />
       </div>
@@ -94,7 +87,6 @@ export default function Sidebar({
         ) : (
           partners.map((p) => {
             const isSel = p.id === selectedId
-            const checked = projectMode && checkedIds.has(p.id)
             const dist = distances[p.id]
             return (
               <div
@@ -102,17 +94,6 @@ export default function Sidebar({
                 className={'card' + (isSel ? ' active' : '')}
                 onClick={() => onSelect(p.id)}
               >
-                {projectMode && (
-                  <div
-                    className={'check' + (checked ? ' on' : '')}
-                    onClick={(e) => { e.stopPropagation(); onToggleCheck(p.id) }}
-                    role="checkbox"
-                    aria-checked={checked}
-                    title={checked ? t('side.removeFromProject') : t('side.addToProject')}
-                  >
-                    <span className="material-symbols-outlined">check</span>
-                  </div>
-                )}
                 <div className="body">
                   <div className="name">
                     <span className="nm-text">{L(p, 'name')}</span>

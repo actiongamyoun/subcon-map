@@ -10,7 +10,7 @@ import { useLang } from '../lib/lang.jsx'
 const tmpId = (p) => p + '_' + Math.random().toString(36).slice(2, 8)
 const blankDraft = () => ({ id: null, name: '', name_en: '', cat: 'pipe', addr: '', addr_en: '', desc: '', desc_en: '', lat: '', lng: '', homepage: '', brochure: '', items: [] })
 
-export default function PartnerModal({ partners, projects = [], activeProjectId = null, onClose, onSave, onDelete }) {
+export default function PartnerModal({ partners, projects = [], activeProjectId = null, onClose, onSave, onDelete, embedded }) {
   const { t, L, tc, ts } = useLang()
   const [mode, setMode] = useState('list') // list | edit
   const [draft, setDraft] = useState(blankDraft())
@@ -76,6 +76,7 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
   if (mode === 'list') {
     return (
       <Modal
+        embedded={embedded}
         icon="apartment" title={t('pM.manageTitle')} subtitle={t('pM.manageSubtitle', { n: partners.length })} wide
         onClose={onClose}
         footer={<div className="right"><button className="btn btn-lg" onClick={onClose}>{t('common.close')}</button></div>}
@@ -104,6 +105,7 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
   /* ─── 편집 모드 ─── */
   return (
     <Modal
+      embedded={embedded}
       icon={draft.id ? 'edit' : 'domain_add'}
       title={draft.id ? t('pM.editTitle') : t('pM.addTitle')}
       subtitle={t('pM.editSubtitle')} wide

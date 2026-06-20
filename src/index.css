@@ -561,6 +561,51 @@ button { font-family: inherit; }
 }
 .detail-empty .material-symbols-outlined { font-size: 19px; }
 
+/* ---------- 랜딩 페이지 ---------- */
+.landing { height: 100vh; display: grid; place-items: center; padding: 24px; background: linear-gradient(160deg, var(--brand-tint-2), var(--bg)); }
+.landing-card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow-lg); padding: 46px 38px; max-width: 420px; width: 100%; text-align: center; }
+.landing-mark { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 18px; background: var(--brand); display: grid; place-items: center; box-shadow: 0 10px 24px rgba(14,165,164,.35); }
+.landing-mark .material-symbols-outlined { font-size: 34px; color: #fff; }
+.landing-card h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.landing-sub { margin: 10px 0 28px; font-size: 14px; color: var(--muted); line-height: 1.5; }
+.landing-enter {
+  appearance: none; border: none; cursor: pointer; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--brand); color: #fff; font-family: var(--font); font-size: 16px; font-weight: 800; padding: 15px; border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(14,165,164,.3); transition: .14s;
+}
+.landing-enter:hover { background: var(--brand-deep); transform: translateY(-1px); }
+.landing-enter .material-symbols-outlined { font-size: 20px; }
+.landing-note { margin-top: 18px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ---------- 관리자 화면 ---------- */
+.admin { height: 100vh; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+.admin-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.admin-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.admin-brand h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.admin-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.brand-mark.sm { width: 36px; height: 36px; border-radius: 10px; }
+.brand-mark.sm .material-symbols-outlined { font-size: 20px; }
+.admin-tabs { display: flex; gap: 6px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line-soft); overflow-x: auto; }
+.admin-tab {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 999px; font-family: var(--font); font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap;
+}
+.admin-tab:hover { border-color: var(--brand); }
+.admin-tab.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.admin-tab.on .material-symbols-outlined { color: #fff; }
+.admin-tab .material-symbols-outlined { font-size: 18px; color: var(--brand-deep); }
+.admin-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 16px 44px; }
+
+/* 관리자 탭 안에 임베드된 편집 패널 */
+.modal.embed { width: 100%; max-width: 860px; margin: 0 auto; max-height: none; border: 1px solid var(--line); box-shadow: var(--shadow); }
+.modal.embed .mbody { overflow: visible; }
+
+/* 메인 상단 관리자 버튼 + 게이트 */
+.btn-admin { border-color: var(--brand); color: var(--brand-deep); }
+.btn-admin .material-symbols-outlined { color: var(--brand-deep); }
+.gate-err { display: flex; align-items: center; gap: 5px; margin-top: 8px; color: var(--route-deep); font-size: 12.5px; font-weight: 600; }
+.gate-err .material-symbols-outlined { font-size: 16px; }
+
 /* ---------- Print (PDF 출력) ---------- */
 .print-root { display: none; }
 

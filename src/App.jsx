@@ -5,10 +5,10 @@ import Sidebar from './components/Sidebar.jsx'
 import MapView from './components/MapView.jsx'
 import Gantt from './components/Gantt.jsx'
 import PrintView from './components/PrintView.jsx'
-import YardModal from './components/YardModal.jsx'
-import PartnerModal from './components/PartnerModal.jsx'
 import PartnerDetailModal from './components/PartnerDetailModal.jsx'
-import ProjectModal from './components/ProjectModal.jsx'
+import Landing from './components/Landing.jsx'
+import AdminScreen from './components/AdminScreen.jsx'
+import AdminGate from './components/AdminGate.jsx'
 import { LangProvider, useLang } from './lib/lang.jsx'
 import {
   loadData, isDemo, saveYard, savePartner, deletePartner, saveProject, deleteProject,
@@ -28,6 +28,10 @@ export default function App() {
 function AppInner() {
   const { t, L } = useLang()
 
+  const [view, setView] = useState('landing') // landing | main | admin
+  const [adminAuthed, setAdminAuthed] = useState(false)
+  const [gateOpen, setGateOpen] = useState(false)
+
   const [loading, setLoading] = useState(true)
   const [demo, setDemo] = useState(false)
   const [bannerOff, setBannerOff] = useState(false)
@@ -41,10 +45,6 @@ function AppInner() {
   const [region, setRegion] = useState(REGION_ALL)
   const [showAll, setShowAll] = useState(false)
   const [distances, setDistances] = useState({})
-
-  const [yardOpen, setYardOpen] = useState(false)
-  const [partnersOpen, setPartnersOpen] = useState(false)
-  const [projectsOpen, setProjectsOpen] = useState(false)
   const [detailPartner, setDetailPartner] = useState(null)
   const [printData, setPrintData] = useState(null)
 
@@ -74,10 +74,6 @@ function AppInner() {
     () => partners.find((p) => p.id === selectedId) || null,
     [partners, selectedId]
   )
-  const checkedIds = useMemo(
-    () => new Set(activeProject ? activeProject.partnerIds : []),
-    [activeProject]
-  )
   // 주소에서 추출한 시/도 목록 (전체 + 등장 지역들)
   const regions = useMemo(() => {
     const set = new Set()
@@ -85,39 +81,20 @@ function AppInner() {
     return [REGION_ALL, ...Array.from(set).sort()]
   }, [partners])
 
-  // 사이드 목록: 지역 필터 적용
-  const listPartners = useMemo(
-    () => (region === REGION_ALL ? partners : partners.filter((p) => regionOf(p.addr) === region)),
-    [partners, region]
-  )
-
-  // 모두 보기 지도 핀: 호선 멤버(선택 시) ∩ 지역
-  const mapPartners = useMemo(() => {
+  // 표시 협력사: 프로젝트 선택 시 그 멤버만 ∩ 지역 (목록·지도 공통)
+  const listPartners = useMemo(() => {
     let arr = activeProject ? partners.filter((p) => activeProject.partnerIds.includes(p.id)) : partners
     if (region !== REGION_ALL) arr = arr.filter((p) => regionOf(p.addr) === region)
     return arr
   }, [partners, activeProject, region])
+  const mapPartners = listPartners
 
   /* ── 핸들러 ── */
   const onRouted = (id, info) => setDistances((d) => ({ ...d, [id]: info }))
-
-  // 드롭다운에서 지역/전체 선택 → 모두 보기 진입 (단일 선택 해제)
   const pickRegion = (r) => { setRegion(r); setShowAll(true); setSelectedId(null) }
-  // 협력사 선택 → 단일 경로 모드 (모두 보기 해제)
   const selectPartner = (id) => { setSelectedId(id); setShowAll(false) }
 
-  const onToggleCheck = (partnerId) => {
-    if (!activeProject) return
-    const has = activeProject.partnerIds.includes(partnerId)
-    const partnerIds = has
-      ? activeProject.partnerIds.filter((x) => x !== partnerId)
-      : [...activeProject.partnerIds, partnerId]
-    const next = { ...activeProject, partnerIds }
-    setProjects((ps) => ps.map((p) => (p.id === next.id ? next : p)))
-    saveProject(next)
-  }
-
-  const handleSaveYard = (y) => { setYard(y); setYardOpen(false); saveYard(y) }
+  const handleSaveYard = (y) => { setYard(y); saveYard(y) }
 
   const handleSavePartner = (p) => {
     const withId = p.id ? p : { ...p, id: newId('p') }
@@ -161,6 +138,13 @@ function AppInner() {
     setPrintData({ title: t('print.projectTitle', { name: L(activeProject, 'name') }), yard, partners: members, distances })
   }
 
+  const openAdmin = () => { if (adminAuthed) setView('admin'); else setGateOpen(true) }
+  const gatePass = () => { setAdminAuthed(true); setGateOpen(false); setView('admin') }
+
+  /* ── 랜딩 (데이터 없어도 즉시 표시) ── */
+  if (view === 'landing') return <Landing onEnter={() => setView('main')} />
+
+  /* ── 로딩 (메인·관리자는 데이터 필요) ── */
   if (loading) {
     return (
       <div style={{ height: '100vh', display: 'grid', placeItems: 'center', color: '#6B8199' }}>
@@ -172,25 +156,39 @@ function AppInner() {
     )
   }
 
-  const projectMode = activeProjectId !== null
+  /* ── 관리자 화면 ── */
+  if (view === 'admin') {
+    return (
+      <AdminScreen
+        yard={yard}
+        partners={partners}
+        projects={projects}
+        onSaveYard={handleSaveYard}
+        onSavePartner={handleSavePartner}
+        onDeletePartner={handleDeletePartner}
+        onSaveProject={handleSaveProject}
+        onDeleteProject={handleDeleteProject}
+        onExit={() => setView('main')}
+      />
+    )
+  }
 
+  /* ── 메인 화면 ── */
   return (
     <>
       <div className="app">
         <TopBar
           yard={yard}
           activeProject={activeProject}
-          onEditYard={() => setYardOpen(true)}
-          onManagePartners={() => setPartnersOpen(true)}
           onExportAll={exportAll}
           onExportProject={exportProject}
+          onOpenAdmin={openAdmin}
         />
 
         <ProjectBar
           projects={projects}
           activeId={activeProjectId}
           onSelect={setActiveProjectId}
-          onManage={() => setProjectsOpen(true)}
         />
 
         <div className="main">
@@ -198,16 +196,13 @@ function AppInner() {
             partners={listPartners}
             selectedId={selectedId}
             onSelect={selectPartner}
-            projectMode={projectMode}
-            activeProject={activeProject}
-            checkedIds={checkedIds}
-            onToggleCheck={onToggleCheck}
             distances={distances}
             regions={regions}
             region={region}
             onPickRegion={pickRegion}
             showAll={showAll}
             onDetail={setDetailPartner}
+            activeProject={activeProject}
           />
           <div className={'content' + (showAll ? ' map-full' : '')}>
             <MapView yard={yard} partner={selectedPartner} mapPartners={mapPartners} showAll={showAll} onRouted={onRouted} onReset={() => setSelectedId(null)} />
@@ -216,26 +211,7 @@ function AppInner() {
         </div>
       </div>
 
-      {yardOpen && <YardModal yard={yard} onClose={() => setYardOpen(false)} onSave={handleSaveYard} />}
-      {partnersOpen && (
-        <PartnerModal
-          partners={partners}
-          projects={projects}
-          activeProjectId={activeProjectId}
-          onClose={() => setPartnersOpen(false)}
-          onSave={handleSavePartner}
-          onDelete={handleDeletePartner}
-        />
-      )}
-      {projectsOpen && (
-        <ProjectModal
-          projects={projects}
-          partners={partners}
-          onClose={() => setProjectsOpen(false)}
-          onSave={handleSaveProject}
-          onDelete={handleDeleteProject}
-        />
-      )}
+      {gateOpen && <AdminGate onClose={() => setGateOpen(false)} onPass={gatePass} />}
 
       {detailPartner && (
         <PartnerDetailModal

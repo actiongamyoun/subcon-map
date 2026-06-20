@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLang } from '../lib/lang.jsx'
 
-export default function TopBar({ yard, activeProject, onEditYard, onManagePartners, onExportAll, onExportProject }) {
+export default function TopBar({ yard, activeProject, onExportAll, onExportProject, onOpenAdmin }) {
   const { t, L, lang, toggle } = useLang()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
@@ -33,13 +33,6 @@ export default function TopBar({ yard, activeProject, onEditYard, onManagePartne
         <span className="material-symbols-outlined">language</span>{lang === 'ko' ? 'EN' : '한'}
       </button>
 
-      <button className="btn" onClick={onEditYard}>
-        <span className="material-symbols-outlined">settings</span>{t('top.yardSettings')}
-      </button>
-      <button className="btn" onClick={onManagePartners}>
-        <span className="material-symbols-outlined">apartment</span>{t('top.managePartners')}
-      </button>
-
       <div className="export-wrap" ref={wrapRef}>
         <button className="btn btn-primary" onClick={() => setOpen((v) => !v)}>
           <span className="material-symbols-outlined">picture_as_pdf</span>{t('top.export')}
@@ -62,6 +55,10 @@ export default function TopBar({ yard, activeProject, onEditYard, onManagePartne
           </div>
         )}
       </div>
+
+      <button className="btn btn-admin" onClick={onOpenAdmin} title={t('top.admin')}>
+        <span className="material-symbols-outlined">admin_panel_settings</span>{t('top.admin')}
+      </button>
     </header>
   )
 }

@@ -1,6 +1,6 @@
 import { useLang } from '../lib/lang.jsx'
 
-export default function ProjectBar({ projects, activeId, onSelect, onManage }) {
+export default function ProjectBar({ projects, activeId, onSelect }) {
   const { t, L } = useLang()
   return (
     <div className="projbar">
@@ -21,11 +21,6 @@ export default function ProjectBar({ projects, activeId, onSelect, onManage }) {
           <span className="cnt">{(pr.partnerIds || []).length}</span>
         </button>
       ))}
-
-      <button className="chip chip-add" onClick={onManage}>
-        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>tune</span>
-        {t('nav.manageProjects')}
-      </button>
     </div>
   )
 }
