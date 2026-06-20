@@ -24,6 +24,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
   const faintRef = useRef(null)
   const liveRef = useRef(null)
   const clusterMarkersRef = useRef([])
+  const spiderRef = useRef({ id: null, markers: [], legs: [], raf: null })
   const mapPartnersRef = useRef([])
   const zoomFnRef = useRef(null)
   const rafRef = useRef(null)
@@ -136,6 +137,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
   function drawOverview() {
     const map = mapRef.current
     if (!map) return
+    clearSpider()
     clusterMarkersRef.current.forEach((m) => m.remove())
     clusterMarkersRef.current = []
     const list = mapPartnersRef.current.filter((p) => p.lat && p.lng)
@@ -156,11 +158,63 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
       } else {
         const lat = group.reduce((s, g) => s + g.ll.lat, 0) / group.length
         const lng = group.reduce((s, g) => s + g.ll.lng, 0) / group.length
-        clusterMarkersRef.current.push(makeCluster(map, { lat, lng }, group.length, () => {
-          map.setView([lat, lng], Math.min(18, map.getZoom() + 2), { animate: true })
-        }))
+        const members = group.map((g) => g.p) // 클러스터에 속한 협력사들
+        clusterMarkersRef.current.push(makeCluster(map, { lat, lng }, group.length, () => spiderfy(members, L.latLng(lat, lng))))
       }
     }
+  }
+
+  // 클러스터 펼치기: 시작점에서 원형으로 멀리 퍼지며(라벨 안 겹치게) 가는 선으로 연결, 애니메이션
+  function spiderfy(members, centerLatLng) {
+    const map = mapRef.current
+    if (!map) return
+    const id = members.map((p) => p.id).sort().join('|')
+    if (spiderRef.current.id === id) { clearSpider(); return } // 같은 클러스터 다시 클릭 → 접기
+    clearSpider()
+
+    const N = members.length
+    const centerPt = map.latLngToContainerPoint(centerLatLng)
+    const D = 98 // 인접 핀 최소 픽셀 간격(라벨 겹침 방지)
+    const R = Math.max(70, Math.min(250, D / (2 * Math.sin(Math.PI / N))))
+    const off = -Math.PI / 2 // 12시 방향부터 시작
+
+    const targets = []
+    for (let i = 0; i < N; i++) {
+      const ang = off + (2 * Math.PI * i) / N
+      const pt = L.point(centerPt.x + R * Math.cos(ang), centerPt.y + R * Math.sin(ang))
+      targets.push(map.containerPointToLatLng(pt))
+    }
+
+    const markers = []
+    const legs = []
+    for (let i = 0; i < N; i++) {
+      legs.push(L.polyline([centerLatLng, centerLatLng], { color: '#0EA5A4', weight: 2, opacity: 0.6, dashArray: '2 5' }).addTo(map))
+      markers.push(makePin(map, { lat: centerLatLng.lat, lng: centerLatLng.lng }, 'multi', Lz(members[i], 'name'), catIcon(members[i].cat)))
+    }
+    spiderRef.current = { id, markers, legs, raf: null }
+
+    const DUR = 380
+    let t0 = null
+    const step = (ts) => {
+      if (!t0) t0 = ts
+      const k = easeIO(Math.min(1, (ts - t0) / DUR))
+      for (let i = 0; i < N; i++) {
+        const lat = centerLatLng.lat + (targets[i].lat - centerLatLng.lat) * k
+        const lng = centerLatLng.lng + (targets[i].lng - centerLatLng.lng) * k
+        markers[i].setLatLng([lat, lng])
+        legs[i].setLatLngs([centerLatLng, [lat, lng]])
+      }
+      if (k < 1) spiderRef.current.raf = requestAnimationFrame(step)
+    }
+    spiderRef.current.raf = requestAnimationFrame(step)
+  }
+
+  function clearSpider() {
+    const s = spiderRef.current
+    if (s.raf) cancelAnimationFrame(s.raf)
+    s.markers.forEach((m) => m.remove())
+    s.legs.forEach((l) => l.remove())
+    spiderRef.current = { id: null, markers: [], legs: [], raf: null }
   }
 
   // 모두 보기 범위로 지도 맞춤 + 클러스터 그림 + 줌 리스너 부착
@@ -196,6 +250,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
   function exitOverview() {
     const map = mapRef.current
     if (map && zoomFnRef.current) { map.off('zoomend', zoomFnRef.current); zoomFnRef.current = null }
+    clearSpider()
     clusterMarkersRef.current.forEach((m) => m.remove())
     clusterMarkersRef.current = []
     setTimeout(() => { if (mapRef.current) mapRef.current.invalidateSize() }, 60)
