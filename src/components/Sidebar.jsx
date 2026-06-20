@@ -98,20 +98,22 @@ export default function Sidebar({
                   <div className="name">
                     <span className="nm-text">{L(p, 'name')}</span>
                     <CatBadge cat={p.cat} />
-                    <button
-                      className="share-btn detail-btn"
-                      onClick={(e) => { e.stopPropagation(); onDetail && onDetail(p) }}
-                      title={t('detail.open')}
-                    >
-                      <span className="material-symbols-outlined">info</span>
-                    </button>
-                    <button
-                      className="share-btn"
-                      onClick={(e) => { e.stopPropagation(); sharePartner(p) }}
-                      title={t('share.title')}
-                    >
-                      <span className="material-symbols-outlined">{copiedId === p.id ? 'check' : 'ios_share'}</span>
-                    </button>
+                    <div className="card-actions">
+                      <button
+                        className="share-btn detail-btn"
+                        onClick={(e) => { e.stopPropagation(); onDetail && onDetail(p) }}
+                        title={t('detail.open')}
+                      >
+                        <span className="material-symbols-outlined">info</span>
+                      </button>
+                      <button
+                        className="share-btn"
+                        onClick={(e) => { e.stopPropagation(); sharePartner(p) }}
+                        title={t('share.title')}
+                      >
+                        <span className="material-symbols-outlined">{copiedId === p.id ? 'check' : 'ios_share'}</span>
+                      </button>
+                    </div>
                   </div>
                   {L(p, 'desc') && <div className="desc">{L(p, 'desc')}</div>}
                   <div className={'meta' + (dist ? '' : ' dim')}>

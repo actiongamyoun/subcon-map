@@ -177,7 +177,7 @@ button { font-family: inherit; }
 .card .check.on .material-symbols-outlined { opacity: 1; }
 
 .card .body { min-width: 0; flex: 1; }
-.card .name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.card .name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; flex-wrap: nowrap; min-width: 0; }
 .badge { font-size: 11px; font-weight: 700; padding: 3px 9px 3px 7px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 .badge .material-symbols-outlined { font-size: 15px; line-height: 1; font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20; }
 .cat-pipe    { background: #E6F0FB; color: #2563A8; }
@@ -493,9 +493,11 @@ button { font-family: inherit; }
 .region-item .material-symbols-outlined { font-size: 16px; color: var(--brand-deep); }
 
 /* ---------- 카드 공유 버튼 ---------- */
-.card .name .nm-text { overflow: hidden; text-overflow: ellipsis; }
+.card .name .nm-text { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card .name .badge { flex-shrink: 0; }
+.card-actions { margin-left: auto; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
 .share-btn {
-  margin-left: auto; appearance: none; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  appearance: none; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
   width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--brand-deep); flex-shrink: 0;
 }
 .share-btn:hover { border-color: var(--brand); background: var(--brand-tint-2); }
