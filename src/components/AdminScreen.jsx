@@ -63,6 +63,7 @@ export default function AdminScreen({
             partners={partners}
             onSaveProject={onSaveProject}
             onDeleteProject={onDeleteProject}
+            onSavePartner={onSavePartner}
           />
         )}
         {tab === 'yard' && (

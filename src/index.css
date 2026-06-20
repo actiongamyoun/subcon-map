@@ -631,10 +631,15 @@ button { font-family: inherit; }
 .mtx-rn-name { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mtx tbody tr:hover .mtx-rn, .mtx tbody tr:hover .mtx-cell { background: var(--brand-tint-2); }
 .mtx-cell { text-align: center; padding: 6px; }
-.mtx-chk { appearance: none; cursor: pointer; width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; color: transparent; transition: .12s; }
+.mtx-cellin { display: inline-flex; align-items: center; gap: 6px; }
+.mtx-chk { appearance: none; cursor: pointer; width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; color: transparent; transition: .12s; flex-shrink: 0; }
 .mtx-chk:hover { border-color: var(--brand); }
 .mtx-chk.on { background: var(--brand); border-color: var(--brand); color: #fff; }
 .mtx-chk .material-symbols-outlined { font-size: 18px; font-variation-settings: 'wght' 700; }
+.mtx-sch { appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 2px; height: 26px; padding: 0 7px 0 5px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-family: var(--mono); font-size: 11.5px; font-weight: 700; transition: .12s; }
+.mtx-sch:hover { border-color: var(--brand); color: var(--brand-deep); background: var(--brand-tint-2); }
+.mtx-sch.has { color: var(--brand-deep); border-color: var(--brand-tint); background: var(--brand-tint-2); }
+.mtx-sch .material-symbols-outlined { font-size: 15px; }
 
 /* ---------- Print (PDF 출력) ---------- */
 .print-root { display: none; }

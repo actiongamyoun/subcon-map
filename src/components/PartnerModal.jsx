@@ -3,15 +3,14 @@ import Modal from './Modal.jsx'
 import LocationSearch from './LocationSearch.jsx'
 import MapPicker from './MapPicker.jsx'
 import CatBadge from './CatBadge.jsx'
-import { CATEGORY_ORDER, STATUS_ORDER } from '../lib/constants.js'
+import { CATEGORY_ORDER } from '../lib/constants.js'
 import { uploadBrochure } from '../lib/api.js'
 import { useLang } from '../lib/lang.jsx'
 
-const tmpId = (p) => p + '_' + Math.random().toString(36).slice(2, 8)
 const blankDraft = () => ({ id: null, name: '', name_en: '', cat: 'pipe', addr: '', addr_en: '', desc: '', desc_en: '', lat: '', lng: '', homepage: '', brochure: '', items: [] })
 
 export default function PartnerModal({ partners, projects = [], activeProjectId = null, onClose, onSave, onDelete, embedded }) {
-  const { t, L, tc, ts } = useLang()
+  const { t, L, tc } = useLang()
   const [mode, setMode] = useState('list') // list | edit
   const [draft, setDraft] = useState(blankDraft())
   const [uploading, setUploading] = useState(false)
@@ -23,7 +22,7 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
       name_en: p.name_en || '', addr_en: p.addr_en || '', desc_en: p.desc_en || '',
       homepage: p.homepage || '', brochure: p.brochure || '',
       lat: p.lat ?? '', lng: p.lng ?? '',
-      items: (p.items || []).map((it) => ({ ...it, prj: it.prj || '' })),
+      items: (p.items || []).map((it) => ({ ...it })),
     })
     setMode('edit')
   }
@@ -45,11 +44,6 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
 
   const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
   const onPick = (r) => setDraft((d) => ({ ...d, addr: r.addr, lat: r.lat.toFixed(6), lng: r.lng.toFixed(6) }))
-  const setItem = (i, k, v) => setDraft((d) => {
-    const items = d.items.slice(); items[i] = { ...items[i], [k]: v }; return { ...d, items }
-  })
-  const addItem = () => setDraft((d) => ({ ...d, items: [...d.items, { id: tmpId('i'), name: '', prj: activeProjectId || '', start: '', end: '', status: 'plan' }] }))
-  const delItem = (i) => setDraft((d) => ({ ...d, items: d.items.filter((_, x) => x !== i) }))
 
   const save = () => {
     const clean = {
@@ -60,9 +54,7 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
       homepage: (draft.homepage || '').trim(), brochure: draft.brochure || '',
       lat: draft.lat === '' ? null : Number(draft.lat),
       lng: draft.lng === '' ? null : Number(draft.lng),
-      items: draft.items
-        .filter((it) => it.name.trim())
-        .map((it) => ({ id: it.id || tmpId('i'), name: it.name.trim(), prj: it.prj || '', start: it.start, end: it.end, status: it.status || 'plan' })),
+      items: draft.items || [],
     }
     onSave(clean)
     setMode('list')
@@ -91,7 +83,7 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
             <div className="pitem" key={p.id}>
               <div className="pg">
                 <div className="pn">{L(p, 'name')} <CatBadge cat={p.cat} style={{ marginLeft: 4 }} /></div>
-                <div className="pd">{L(p, 'addr') || t('common.noAddress')} · {t('pM.itemsN', { n: (p.items || []).length })}</div>
+                <div className="pd">{L(p, 'addr') || t('common.noAddress')}</div>
               </div>
               <button className="linkbtn" onClick={() => startEdit(p)}><span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>{t('common.edit')}</button>
               <button className="linkbtn danger" onClick={() => remove(p)}><span className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>{t('common.delete')}</button>
@@ -203,31 +195,6 @@ export default function PartnerModal({ partners, projects = [], activeProjectId 
           </label>
         )}
       </div>
-
-      <div className="divider" />
-
-      <div className="sec-t"><span>{t('pM.items')}</span></div>
-      {draft.items.length > 0 && (
-        <div className="itemhead itemhead-prj">
-          <div>{t('pM.itemName')}</div><div>{t('pM.itemProject')}</div><div>{t('pM.itemStart')}</div><div>{t('pM.itemEnd')}</div><div>{t('pM.itemStatus')}</div><div></div>
-        </div>
-      )}
-      {draft.items.map((it, i) => (
-        <div className="itemrow itemrow-prj" key={it.id || i}>
-          <input className="in" value={it.name} onChange={(e) => setItem(i, 'name', e.target.value)} placeholder="1번 블록 배관 설치" />
-          <select className="sel" value={it.prj || ''} onChange={(e) => setItem(i, 'prj', e.target.value)}>
-            <option value="">{t('item.common')}</option>
-            {projects.map((pr) => <option key={pr.id} value={pr.id}>{L(pr, 'name')}</option>)}
-          </select>
-          <input className="in" type="date" value={it.start || ''} onChange={(e) => setItem(i, 'start', e.target.value)} />
-          <input className="in" type="date" value={it.end || ''} onChange={(e) => setItem(i, 'end', e.target.value)} />
-          <select className="sel" value={it.status || 'plan'} onChange={(e) => setItem(i, 'status', e.target.value)}>
-            {STATUS_ORDER.map((k) => <option key={k} value={k}>{ts(k)}</option>)}
-          </select>
-          <button className="del" onClick={() => delItem(i)} title={t('common.delete')}><span className="material-symbols-outlined">delete</span></button>
-        </div>
-      ))}
-      <button className="addrow" onClick={addItem}><span className="material-symbols-outlined">add</span>{t('pM.addItem')}</button>
     </Modal>
   )
 }
