@@ -175,12 +175,16 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
     const N = members.length
     const centerPt = map.latLngToContainerPoint(centerLatLng)
     const D = 98 // 인접 핀 최소 픽셀 간격(라벨 겹침 방지)
-    const R = Math.max(70, Math.min(250, D / (2 * Math.sin(Math.PI / N))))
-    const off = -Math.PI / 2 // 12시 방향부터 시작
+    const GAP_MAX = (52 * Math.PI) / 180 // 핀 사이 벌어지는 각도(부채살 간격)
+    const ARC_MAX = (280 * Math.PI) / 180  // 부채꼴 최대 펼침 폭
+    let gap = GAP_MAX
+    if (gap * (N - 1) > ARC_MAX) gap = ARC_MAX / (N - 1) // 멤버 많으면 간격 좁혀 한바퀴 안 넘게
+    const R = Math.max(72, Math.min(260, D / (2 * Math.sin(gap / 2))))
+    const base = -Math.PI / 2 - (gap * (N - 1)) / 2 // 12시 방향을 중심으로 위로 펼침
 
     const targets = []
     for (let i = 0; i < N; i++) {
-      const ang = off + (2 * Math.PI * i) / N
+      const ang = base + gap * i
       const pt = L.point(centerPt.x + R * Math.cos(ang), centerPt.y + R * Math.sin(ang))
       targets.push(map.containerPointToLatLng(pt))
     }
