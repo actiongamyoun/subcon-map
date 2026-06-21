@@ -388,10 +388,10 @@ export const STRINGS = {
 export const CAT_I18N = {
   pipe: { ko: '파이프', en: 'Pipe' },
   block: { ko: '선박블록', en: 'Ship Block' },
-  accom: { ko: '거주구', en: 'Accommodation' },
+  accom: { ko: '선박 데크하우스', en: 'Deckhouse' },
   outfit: { ko: '철의장품', en: 'Steel Outfitting' },
-  hatch: { ko: 'Hatch Cover', en: 'Hatch Cover' },
-  lashing: { ko: 'Lashing Bridge', en: 'Lashing Bridge' },
+  hatch: { ko: '선박 해치커버', en: 'Hatch Cover' },
+  lashing: { ko: '선박 라싱브리지', en: 'Lashing Bridge' },
   etc: { ko: '기타', en: 'Other' },
 }
 

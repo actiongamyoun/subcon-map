@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { geocode } from '../lib/kakao.js'
 import { getDirections } from '../lib/api.js'
 import { pathMetrics, pointAt } from '../lib/geo.js'
-import { DEFAULT_YARD, catIcon } from '../lib/constants.js'
+import { DEFAULT_YARD, catIcon, catHasCustomIcon } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
 const ORIGIN_ZOOM = 14
@@ -154,7 +154,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
       }
       if (group.length === 1) {
         const g = group[0]
-        clusterMarkersRef.current.push(makePin(map, { lat: g.ll.lat, lng: g.ll.lng }, 'multi', Lz(g.p, 'name'), catIcon(g.p.cat)))
+        clusterMarkersRef.current.push(makePin(map, { lat: g.ll.lat, lng: g.ll.lng }, 'multi', Lz(g.p, 'name'), g.p.cat))
       } else {
         const lat = group.reduce((s, g) => s + g.ll.lat, 0) / group.length
         const lng = group.reduce((s, g) => s + g.ll.lng, 0) / group.length
@@ -193,7 +193,7 @@ export default function MapView({ yard, partner, mapPartners = [], showAll = fal
     const legs = []
     for (let i = 0; i < N; i++) {
       legs.push(L.polyline([centerLatLng, centerLatLng], { color: '#0EA5A4', weight: 2, opacity: 0.6, dashArray: '2 5' }).addTo(map))
-      markers.push(makePin(map, { lat: centerLatLng.lat, lng: centerLatLng.lng }, 'multi', Lz(members[i], 'name'), catIcon(members[i].cat)))
+      markers.push(makePin(map, { lat: centerLatLng.lat, lng: centerLatLng.lng }, 'multi', Lz(members[i], 'name'), members[i].cat))
     }
     spiderRef.current = { id, markers, legs, raf: null }
 
@@ -430,10 +430,16 @@ function resolveOrigin(yard) {
   return { lat: DEFAULT_YARD.lat, lng: DEFAULT_YARD.lng }
 }
 
-function makePin(map, pos, kind, label, iconOverride) {
-  const icon = iconOverride || (kind === 'origin' ? 'anchor' : 'apartment')
+function makePin(map, pos, kind, label, cat) {
+  let iconHtml
+  if (cat && catHasCustomIcon(cat)) {
+    iconHtml = `<span class="cat-ic ci-${cat}"></span>`
+  } else {
+    const sym = cat ? catIcon(cat) : (kind === 'origin' ? 'anchor' : 'apartment')
+    iconHtml = `<span class="material-symbols-outlined">${sym}</span>`
+  }
   const html =
-    `<div class="pin ${kind}"><div class="dot"><span class="material-symbols-outlined">${icon}</span></div>` +
+    `<div class="pin ${kind}"><div class="dot">${iconHtml}</div>` +
     `<div class="tag">${escapeHtml(label)}</div></div>`
   return L.marker([pos.lat, pos.lng], {
     icon: L.divIcon({ html, className: 'pin-divicon', iconSize: [0, 0], iconAnchor: [0, 0] }),

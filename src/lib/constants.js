@@ -1,4 +1,6 @@
 // 업종/공정 분류 (라벨은 i18n에서, 여기선 색상 클래스 + 아이콘)
+import { CAT_ICON_IMG } from './catIcons.js'
+
 export const CATEGORIES = {
   pipe:    { label: '파이프',         cls: 'cat-pipe',    icon: 'plumbing' },
   block:   { label: '선박블록',       cls: 'cat-block',   icon: 'deployed_code' },
@@ -15,6 +17,10 @@ export function catClass(key) {
 }
 export function catIcon(key) {
   return (CATEGORIES[key] || CATEGORIES.etc).icon
+}
+// 커스텀(업로드) 아이콘이 있는 분류인지
+export function catHasCustomIcon(key) {
+  return !!CAT_ICON_IMG[key]
 }
 
 // 주소에서 시/도 추출 (모두 보기 지역 필터용)

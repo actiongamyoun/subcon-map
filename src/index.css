@@ -180,6 +180,9 @@ button { font-family: inherit; }
 .card .name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; flex-wrap: nowrap; min-width: 0; }
 .badge { font-size: 11px; font-weight: 700; padding: 3px 9px 3px 7px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 .badge .material-symbols-outlined { font-size: 15px; line-height: 1; font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 20; }
+/* 커스텀 분류 아이콘 (CSS mask, currentColor로 색 입힘). ci-* 규칙은 catIcons.js가 주입 */
+.cat-ic { display: inline-block; width: 1em; height: 1em; flex-shrink: 0; background-color: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.badge .cat-ic { width: 16px; height: 16px; }
 .cat-pipe    { background: #E6F0FB; color: #2563A8; }
 .cat-block   { background: #E2F5F4; color: #0A7E7C; }
 .cat-accom   { background: #EFEAFB; color: #6B45B0; }
@@ -342,6 +345,7 @@ button { font-family: inherit; }
   border: 2.5px solid #fff; box-shadow: 0 6px 14px rgba(12,36,64,.3); display: grid; place-items: center;
 }
 .pin .dot .material-symbols-outlined { transform: rotate(45deg); font-size: 16px; color: #fff; font-variation-settings: 'FILL' 1; }
+.pin .dot .cat-ic { width: 19px; height: 19px; background-color: #fff; transform: rotate(45deg); }
 .pin.origin .dot { background: var(--brand); }
 .pin.dest .dot { background: var(--route); }
 .pin.multi .dot { background: #2F6FB0; }
