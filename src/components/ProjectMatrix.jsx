@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import Modal from './Modal.jsx'
-import CatBadge from './CatBadge.jsx'
 import { STATUS_ORDER } from '../lib/constants.js'
 import { useLang } from '../lib/lang.jsx'
 
@@ -138,31 +137,28 @@ export default function ProjectMatrix({ projects, partners, onSaveProject, onDel
             <thead>
               <tr>
                 <th className="mtx-corner">{t('mtx.corner')}</th>
-                {projects.map((pr) => (
-                  <th key={pr.id} className="mtx-ph">
-                    <button className="mtx-pname" onClick={() => setEditProj(pr)} title={t('common.edit')}>
-                      <span className="mtx-pn-text">{L(pr, 'name')}</span>
-                      <span className="material-symbols-outlined">edit</span>
-                    </button>
-                    <span className="mtx-pcnt">{(pr.partnerIds || []).length}</span>
+                {partners.map((p) => (
+                  <th key={p.id} className="mtx-ph">
+                    <span className="mtx-ph-name">{L(p, 'name')}</span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {partners.map((p) => (
-                <tr key={p.id}>
+              {projects.map((pr) => (
+                <tr key={pr.id}>
                   <td className="mtx-rn">
-                    <div className="mtx-rn-in">
-                      <span className="mtx-rn-name">{L(p, 'name')}</span>
-                      <CatBadge cat={p.cat} />
-                    </div>
+                    <button className="mtx-pname" onClick={() => setEditProj(pr)} title={t('common.edit')}>
+                      <span className="mtx-pn-text">{L(pr, 'name')}</span>
+                      <span className="material-symbols-outlined">edit</span>
+                    </button>
+                    <span className="mtx-pcnt">{(pr.partnerIds || []).length}</span>
                   </td>
-                  {projects.map((pr) => {
+                  {partners.map((p) => {
                     const on = isIn(pr, p.id)
                     const cnt = itemCount(p, pr)
                     return (
-                      <td key={pr.id} className="mtx-cell">
+                      <td key={p.id} className="mtx-cell">
                         <div className="mtx-cellin">
                           <button className={'mtx-chk' + (on ? ' on' : '')} onClick={() => toggle(pr, p.id)} aria-pressed={on} title={on ? t('mtx.unassign') : t('mtx.assign')}>
                             <span className="material-symbols-outlined">check</span>
