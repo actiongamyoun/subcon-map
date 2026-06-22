@@ -121,8 +121,8 @@ button { font-family: inherit; }
 
 /* ---------- Project bar ---------- */
 .projbar {
-  flex: none; display: flex; align-items: center; gap: 8px; padding: 9px 18px;
-  background: var(--bg-2); border-bottom: 1px solid var(--line); overflow-x: auto;
+  flex: none; display: flex; align-items: center; gap: 10px; padding: 9px 18px;
+  background: var(--bg-2); border-bottom: 1px solid var(--line);
 }
 .projbar .pb-label {
   font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .08em;
@@ -141,6 +141,37 @@ button { font-family: inherit; }
 .chip.active .cnt { background: rgba(255,255,255,.25); color: #fff; }
 .chip-add { color: var(--brand-deep); border-style: dashed; border-color: #b9d6d5; }
 .chip-add:hover { background: var(--brand-tint-2); }
+
+/* 프로젝트 선택 드롭다운 */
+.proj-menu { position: relative; flex: none; }
+.proj-btn {
+  appearance: none; border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px;
+  font-family: var(--font); font-size: 13px; font-weight: 700; color: var(--ink-soft); max-width: 280px; transition: .14s;
+}
+.proj-btn:hover { border-color: var(--brand); }
+.proj-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(14,165,164,.28); }
+.proj-btn.active .material-symbols-outlined { color: #fff; }
+.proj-btn .material-symbols-outlined { font-size: 16px; color: var(--brand-deep); }
+.proj-btn .pm-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-btn .pm-caret { margin-left: 1px; font-size: 18px; }
+.proj-btn .cnt { font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--bg); border-radius: 999px; padding: 1px 7px; }
+.proj-btn.active .cnt { background: rgba(255,255,255,.25); color: #fff; }
+.proj-scrim { position: fixed; inset: 0; z-index: 1400; }
+.proj-list {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 1401; min-width: 210px; max-height: 62vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 5px;
+}
+.proj-item {
+  appearance: none; border: none; background: none; cursor: pointer; width: 100%; text-align: left;
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px;
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap;
+}
+.proj-item:hover { background: var(--brand-tint-2); }
+.proj-item.on { background: var(--brand-tint); color: var(--brand-deep); font-weight: 800; }
+.proj-item .material-symbols-outlined { font-size: 17px; color: var(--brand-deep); flex-shrink: 0; }
+.proj-item .pi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.proj-item .cnt { font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--bg); border-radius: 999px; padding: 1px 7px; flex-shrink: 0; }
 
 /* ---------- Main ---------- */
 .main { flex: 1; display: grid; grid-template-columns: clamp(300px, 24vw, 400px) 1fr; min-height: 0; }
